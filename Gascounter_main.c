@@ -31,13 +31,15 @@
 #include <time.h>
 
 #include "Gascounter_main.h"
-#include "gc_usart.h"
-#include "gc_xbee.h"
-#include "gc_xbee_utilities.h"
+#include "usart.h"
+#include "xbee.h"
+#include "xbee_utilities.h"
+#include "status.h"
 #include "DS3231M.h"
-#include "gc_BMP085.h"
+#include "BMP085.h"
 #include "LCD.h"
 #include "I2C_utilities.h"
+#include "module_globals.h"
 
 #include "assert.h"
 
@@ -50,12 +52,6 @@
 /* STATUS                                                               */
 /************************************************************************/
 
-/**
-* @brief Connection Status of BMP and DS3231M
-*
-* Holds the Status of the connection to the BMP sensor (Pressure and Temperature Sensor) and the DS3231M (Time and Date) Chip.
-*/
-connectedType connected = {.BMP = 0,.DS3231M=0,.TWI = 1};
 
 /**
 * @brief Status related Information
@@ -63,7 +59,7 @@ connectedType connected = {.BMP = 0,.DS3231M=0,.TWI = 1};
 *
 * Contains Status-bytes for internal and external Status processing and reporting
 */
-volatile statusType status={.byte_90=0,  .byte_92=0,  .byte_95=0, .byte_96=0, .device=0,.device_reset_on_Send = 0};
+volatile statusType status_ms_bytes={.byte_90=0,  .byte_92=0,  .byte_95=0, .byte_96=0, .device=0,.device_reset_on_Send = 0};
 
 
 /************************************************************************/
@@ -344,7 +340,7 @@ void Collect_Measurement_Data(uint32_t *dest_high, uint32_t *dest_low){
 	
 	if (connected.DS3231M && connected.TWI)
 	{
-		DS3231M_read_time(1);
+		DS3231M_read_time();
 		
 		sendbuffer[0] = Time.tm_sec;
 		sendbuffer[1] = Time.tm_min;
@@ -354,14 +350,14 @@ void Collect_Measurement_Data(uint32_t *dest_high, uint32_t *dest_low){
 		sendbuffer[5] = Time.tm_year;
 	}
 	
-	if (!CHECK_NETWORK_ERROR && (!connected.TWI || CHECK_TIMER_ERROR) ) //  only way to get the current time when the TWI bus is locked or the last timereading was invalid but Network must be up
+	if (!CHECK_ERROR(NETWORK_ERROR) && (!connected.TWI || CHECK_ERROR(TIMER_ERROR)) ) //  only way to get the current time when the TWI bus is locked or the last timereading was invalid but Network must be up
 	{
-		buffer[0]= status.byte_95; // Ping Status Byte is always 0
-		if( 0xFF == xbee_send_request(CMD_send_Ping_95,buffer,1,dest_high,dest_low))
+		buffer[0]= status_ms_bytes.byte_95; // Ping Status Byte is always 0
+		if( 0xFF == xbee_send_request(CMD_send_Ping_95,buffer,1))
 		{
 			LCD_paint_info_line("NoPong",0);
 			_delay_ms(500);
-			SET_NETWORK_ERROR;
+			SET_ERROR(NETWORK_ERROR);;
 			analyze_Connection(dest_high,dest_low);
 			
 		}
@@ -379,7 +375,7 @@ void Collect_Measurement_Data(uint32_t *dest_high, uint32_t *dest_low){
 		}
 	}
 	
-	if (CHECK_NETWORK_ERROR && (!connected.TWI || CHECK_TIMER_ERROR))
+	if (CHECK_ERROR(NETWORK_ERROR) && (!connected.TWI || CHECK_ERROR(TIMER_ERROR)))
 	{
 		
 		
@@ -426,15 +422,15 @@ void Collect_Measurement_Data(uint32_t *dest_high, uint32_t *dest_low){
 	
 	uint8_t curr_Stat = 0;
 	
-	if(BIT_CHECK(status.device_reset_on_Send,2)){BIT_SET(curr_Stat,status_bit_option_err_91);}
+	if(BIT_CHECK(status_ms_bytes.device_reset_on_Send,2)){BIT_SET(curr_Stat,status_bit_option_err_91);}
 	
-	if(BIT_CHECK(status.device_reset_on_Send,3)){BIT_SET(curr_Stat,status_bit_Temp_Press_Err_91);}
+	if(BIT_CHECK(status_ms_bytes.device_reset_on_Send,3)){BIT_SET(curr_Stat,status_bit_Temp_Press_Err_91);}
 	
-	if (BIT_CHECK(status.device_reset_on_Send,7)){BIT_SET(curr_Stat,status_bit_volume_too_big_91);}
+	if (BIT_CHECK(status_ms_bytes.device_reset_on_Send,7)){BIT_SET(curr_Stat,status_bit_volume_too_big_91);}
 	
-	if(BIT_CHECK(status.device_reset_on_Send,4)){BIT_SET(curr_Stat,status_bit_DS3231M_err_91);}
+	if(BIT_CHECK(status_ms_bytes.device_reset_on_Send,4)){BIT_SET(curr_Stat,status_bit_DS3231M_err_91);}
 	
-	if(BIT_CHECK(status.device_reset_on_Send,6)){BIT_SET(curr_Stat,status_bit_I2C_err_91);}
+	if(BIT_CHECK(status_ms_bytes.device_reset_on_Send,6)){BIT_SET(curr_Stat,status_bit_I2C_err_91);}
 	
 	
 
@@ -554,7 +550,7 @@ void init(void)
 	// Timer
 	LCD_InitScreen_AddLine("Init Clock",0);
 
-	if (init_DS3231M() == 0) // trying to connect with DS3231M (time)
+	if (init_DS3231M(&LCD_paint_info_line) == 0) // trying to connect with DS3231M (time)
 	{
 		connected.DS3231M = 1;
 		LCD_InitScreen_AddLine("...success",0);
@@ -562,19 +558,19 @@ void init(void)
 	else
 	{
 		connected.DS3231M = 0;
-		SET_TIMER_ERROR;
+		SET_ERROR(TIMER_ERROR);
 		LCD_InitScreen_AddLine("...error",0);
 	}
 
 	// Pressure and Temperature Sensor
 	LCD_InitScreen_AddLine("Init Press",0);
 	
-	if (init_BMP() == 0) // trying to connect with BMP
+	if (init_BMP(&LCD_paint_info_line) == 0) // trying to connect with BMP
 	{
 		connected.BMP = 1;
 		connected.BMP_on_Startup = 1;
 		LCD_InitScreen_AddLine("...success",0);
-		CLEAR_TEMPPRESS_ERROR;
+		CLEAR_ERROR(TEMPPRESS_ERROR);;
 	}
 	else
 	{
@@ -664,7 +660,7 @@ void displayTemPreVol(void){
 	*/
 	
 	
-	if ( CHECK_TEMPPRESS_ERROR)
+	if ( CHECK_ERROR(TEMPPRESS_ERROR))
 	{
 		/*
 		LCD_Clear();
@@ -678,7 +674,7 @@ void displayTemPreVol(void){
 		LCD_Clear_row_from_column(2, 3);
 		LCD_String("TEMP ERR",3,3);
 	}
-	if (CHECK_TEMPPRESS_ERROR)
+	if (CHECK_ERROR(TEMPPRESS_ERROR))
 	{
 		/*
 		LCD_Clear();
@@ -700,7 +696,7 @@ void displayTemPreVol(void){
 
 	
 	// TEMPERATURE
-	if (!(options.T_Compensation_enable && (CHECK_TEMPPRESS_ERROR)))
+	if (!(options.T_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
 	{
 		LCD_Clear_row_from_column(2, 3);
 		LCD_Value((int32_t) Temperature_value - 2732, 1, 2, 3, "°C");
@@ -712,7 +708,7 @@ void displayTemPreVol(void){
 	
 	
 	//PRESSURE
-	if(!(options.p_Compensation_enable && (CHECK_TEMPPRESS_ERROR)))
+	if(!(options.p_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
 	{
 		LCD_Clear_row_from_column(2, 4);
 		LCD_Value(Pressure_value, 1, 2, 4, "mbar");
@@ -748,7 +744,7 @@ void displayTemPreVol(void){
 	LCD_Clear_row_from_column(3, 2);
 	LCD_Value(options.CorrVolume / options.step_Volume, position_volume_dot_point, 2, 2, "m³");
 	
-	DS3231M_read_time(0);
+	DS3231M_read_time();
 	
 	
 	if (connected.TWI && connected.DS3231M)
@@ -839,7 +835,7 @@ void displayTemPreVol(void){
 void Temp_Press_CorrectedVolume(uint32_t dest_low,uint32_t dest_high){
 	FUNCTION_TRACE
 	Funtrace_enter(4);
-	if(!CHECK_TEMPPRESS_ERROR && connected.TWI){ // only updated when BMP is connected
+	if(!CHECK_ERROR(TEMPPRESS_ERROR) && connected.TWI){ // only updated when BMP is connected
 		
 		Temperature_value = BMP_Temperature;
 		Pressure_value = (options.span_pressure * BMP_Pressure)/100000 + options.offset_pressure; // conversion from Pa to mbar
@@ -860,14 +856,14 @@ void Temp_Press_CorrectedVolume(uint32_t dest_low,uint32_t dest_high){
 	if (options.Value < old.Value) // Checks for overflows.
 	{
 		
-		SET_VOLUME_TOO_BIG_ERROR;
+		SET_ERROR(VOLUME_TOO_BIG_ERROR);;
 		#ifdef USE_DISPLAY
 		LCD_Clear_row_from_column(6, 5);
 		LCD_String("Overfl.", 6, 5);
 		#endif
 
 		
-		status.device_reset_on_Send |= status.device;
+		status_ms_bytes.device_reset_on_Send |= status_ms_bytes.device;
 
 	}
 	
@@ -877,7 +873,7 @@ void Temp_Press_CorrectedVolume(uint32_t dest_low,uint32_t dest_high){
 	
 	if (options.Volume < old.Volume) // Checks for overflows.
 	{
-		SET_VOLUME_TOO_BIG_ERROR;
+		SET_ERROR(VOLUME_TOO_BIG_ERROR);;
 		
 		#ifdef USE_DISPLAY
 		LCD_Clear_row_from_column(6, 5);
@@ -885,7 +881,7 @@ void Temp_Press_CorrectedVolume(uint32_t dest_low,uint32_t dest_high){
 		#endif
 
 
-		status.device_reset_on_Send |= status.device;
+		status_ms_bytes.device_reset_on_Send |= status_ms_bytes.device;
 	}
 	
 	old.Volume = options.Volume;
@@ -914,7 +910,7 @@ void Temp_Press_CorrectedVolume(uint32_t dest_low,uint32_t dest_high){
 	
 	if (options.CorrVolume < old.CorrVolume) // Checks for overflows.
 	{
-		SET_VOLUME_TOO_BIG_ERROR;
+		SET_ERROR(VOLUME_TOO_BIG_ERROR);;
 		LCD_paint_info_line("Overfl",1);
 	}
 	
@@ -950,8 +946,8 @@ void PT_Plausibility(void){
 
 		if (!T_Bounds && !P_Bounds)
 		{// P and T Values are probably correct nothing to do here
-			CLEAR_I2C_BUS_ERROR;
-			CLEAR_TEMPPRESS_ERROR;
+			CLEAR_ERROR(I2C_BUS_ERROR);;
+			CLEAR_ERROR(TEMPPRESS_ERROR);;
 			
 
 			return;
@@ -959,11 +955,11 @@ void PT_Plausibility(void){
 		else
 		{
 			
-			SET_TEMPPRESS_ERROR;
+			SET_ERROR(TEMPPRESS_ERROR);;
 			
 			if(BMP_Temp_and_Pressure())
 			{
-				SET_I2C_BUS_ERROR;
+				SET_ERROR(I2C_BUS_ERROR);
 
 				return;
 			}
@@ -997,8 +993,8 @@ void PT_Plausibility(void){
 	if ((BMP_Pressure > MAX_NOMINAL_PRESSURE) &&
 	(BMP_Temperature < 2891) )
 	{
-		CLEAR_I2C_BUS_ERROR;
-		CLEAR_TEMPPRESS_ERROR;
+		CLEAR_ERROR(I2C_BUS_ERROR);;
+		CLEAR_ERROR(TEMPPRESS_ERROR);;
 		LCD_paint_info_line("P wave",0);
 		_delay_ms(500);
 		return;
@@ -1009,8 +1005,8 @@ void PT_Plausibility(void){
 	if ((BMP_Temperature < MIN_NOMINAL_TEMPERATURE) &&
 	(BMP_Pressure > 100000))
 	{
-		CLEAR_I2C_BUS_ERROR;
-		CLEAR_TEMPPRESS_ERROR;
+		CLEAR_ERROR(I2C_BUS_ERROR);;
+		CLEAR_ERROR(TEMPPRESS_ERROR);;
 		LCD_paint_info_line("T wave",0);
 		_delay_ms(500);
 		return;
@@ -1087,7 +1083,7 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer, uint32_t dest_
 	//status_bit_registration_90
 
 
-	buffer[0] = status.byte_90;
+	buffer[0] = status_ms_bytes.byte_90;
 	
 	// Pack frame
 	uint8_t temp_bytes_number = xbee_pack_tx64_frame(db_cmd_type, buffer,1 , dest_high, dest_low);
@@ -1170,7 +1166,7 @@ void execute_server_CMDS(uint8_t reply_id,uint32_t dest_high, uint32_t dest_low)
 		//=================================================================
 		case CMD_received_send_data_97: // Send Measurement Data immediately
 		Collect_Measurement_Data(&dest_high, &dest_low);
-		xbee_send_message(CMD_send_response_send_data_94,sendbuffer,MEASUREMENT_MESSAGE_LENGTH,&dest_high,&dest_low);
+		xbee_send_message(CMD_send_response_send_data_94,sendbuffer,MEASUREMENT_MESSAGE_LENGTH);
 		break;
 		
 		//=================================================================
@@ -1230,9 +1226,9 @@ void execute_server_CMDS(uint8_t reply_id,uint32_t dest_high, uint32_t dest_low)
 		sendbuffer[length++] = options.Pressure_norm >> 8;
 		sendbuffer[length++] = (uint8_t) options.Pressure_norm;
 		
-		sendbuffer[length++] = status.byte_92; // status_byte_92 is always zero
+		sendbuffer[length++] = status_ms_bytes.byte_92; // status_byte_92 is always zero
 		
-		xbee_send_message(CMD_send_options_92,sendbuffer,length,&dest_high,&dest_low);
+		xbee_send_message(CMD_send_options_92,sendbuffer,length);
 		break;
 		
 		case CMD_received_ILM_Ignore_99: // ILM broadcast Message received do nothing
@@ -1270,7 +1266,7 @@ void execute_server_CMDS(uint8_t reply_id,uint32_t dest_high, uint32_t dest_low)
 				sendbuffer[i] = 0;
 			}
 			
-			xbee_send_message(CMD_send_funtrace_88,sendbuffer,FUNTRACE_ARRAY_SIZE+6,&dest_high,&dest_low);
+			xbee_send_message(CMD_send_funtrace_88,sendbuffer,FUNTRACE_ARRAY_SIZE+6);
 			break;
 		}
 		
@@ -1301,7 +1297,7 @@ void execute_server_CMDS(uint8_t reply_id,uint32_t dest_high, uint32_t dest_low)
 		}
 		
 
-		xbee_send_message(CMD_send_funtrace_88,sendbuffer,FUNTRACE_ARRAY_SIZE+6,&dest_high,&dest_low);
+		xbee_send_message(CMD_send_funtrace_88,sendbuffer,FUNTRACE_ARRAY_SIZE+6);
 
 		
 		
@@ -1351,14 +1347,14 @@ uint8_t ping_server(uint32_t *dest_high,uint32_t *dest_low)
 	FUNCTION_TRACE
 	
 	#ifdef USE_LAN
-	CLEAR_NETWORK_ERROR
+	CLEAR_ERROR(NETWORK_ERROR);
 	#endif
-	buffer[0]= status.byte_95; // Ping Status Byte is always 0
-	if( 0xFF == xbee_send_request(CMD_send_Ping_95,buffer,1,dest_high,dest_low))
+	buffer[0]= status_ms_bytes.byte_95; // Ping Status Byte is always 0
+	if( 0xFF == xbee_send_request(CMD_send_Ping_95,buffer,1))
 	{
 		LCD_paint_info_line("NoPong",0);
 		_delay_ms(500);
-		SET_NETWORK_ERROR
+		SET_ERROR(NETWORK_ERROR);
 		return 0;
 	}
 	else
@@ -1401,11 +1397,11 @@ uint8_t analyze_Connection(uint32_t *dest_high,uint32_t *dest_low)
 	#ifdef USE_XBEE
 
 	
-	if (!xbee_reconnect(dest_low,dest_high))
+	if (!xbee_reconnect())
 	{
 		//Associated
-		CLEAR_NETWORK_ERROR;
-		CLEAR_NO_REPLY_ERROR;
+		CLEAR_ERROR(NETWORK_ERROR);;
+		CLEAR_ERROR(NO_REPLY_ERROR);;
 		if(!ping_server(dest_high,dest_low)){
 			LCD_paint_info_line("NoServ",0);
 			NetStatIndex = 2;
@@ -1413,8 +1409,8 @@ uint8_t analyze_Connection(uint32_t *dest_high,uint32_t *dest_low)
 		}
 		else{
 			ex_mode = ex_mode_online;
-			CLEAR_NETWORK_ERROR;
-			CLEAR_NO_REPLY_ERROR;
+			CLEAR_ERROR(NETWORK_ERROR);;
+			CLEAR_ERROR(NO_REPLY_ERROR);;
 			return 1;
 		}
 		
@@ -1510,7 +1506,7 @@ void Set_Options(uint8_t *optBuffer,uint32_t dest_high,uint32_t dest_low){
 	.Pressure_norm =         ((uint16_t) optBuffer[36] << 8) | optBuffer[37] };
 
 	
-	status.byte_96 = optBuffer[38];
+	status_ms_bytes.byte_96 = optBuffer[38];
 	
 	
 
@@ -1581,8 +1577,8 @@ void Set_Options(uint8_t *optBuffer,uint32_t dest_high,uint32_t dest_low){
 	(optholder.span_pressure > 20000))
 	{
 		BIT_SET(sendbuffer[0],status_bit_success_setting_options_93);  // not successfully accepted
-		SET_OPTIONS_ERROR;
-		xbee_send_message(CMD_send_response_options_set_93,sendbuffer,1,&dest_high,&dest_low);
+		SET_ERROR(OPTIONS_ERROR);
+		xbee_send_message(CMD_send_response_options_set_93,sendbuffer,1);
 		//ex_mode = ex_mode_error;
 		return ;
 	}
@@ -1594,7 +1590,7 @@ void Set_Options(uint8_t *optBuffer,uint32_t dest_high,uint32_t dest_low){
 		optholder.delta_V = optholder.step_Volume;
 	}
 	
-	if (BIT_CHECK(status.byte_96,status_bit_set_offsets_96))
+	if (BIT_CHECK(status_ms_bytes.byte_96,status_bit_set_offsets_96))
 	{
 		options.offsetValue =  optholder.offsetValue * 1000;
 		options.offsetVolume = optholder.offsetVolume * 1000;
@@ -1644,20 +1640,20 @@ void Set_Options(uint8_t *optBuffer,uint32_t dest_high,uint32_t dest_low){
 	#endif
 	
 
-	CLEAR_OPTIONS_ERROR;
-	CLEAR_VOLUME_TOO_BIG_ERROR;// no overflow in Value, Volume and CorrVolume
+	CLEAR_ERROR(OPTIONS_ERROR);;
+	CLEAR_ERROR(VOLUME_TOO_BIG_ERROR);;// no overflow in Value, Volume and CorrVolume
 	
 	// Options successfully set
 	sendbuffer[0] = 0;
-	CLEAR_OPTIONS_ERROR;
-	xbee_send_message(CMD_send_response_options_set_93,sendbuffer,1,&dest_high,&dest_low);
+	CLEAR_ERROR(OPTIONS_ERROR);;
+	xbee_send_message(CMD_send_response_options_set_93,sendbuffer,1);
 	LCD_paint_info_line(" Op93 ",0);
 	_delay_ms(2000);
 
 	if((options.T_Compensation_enable || options.p_Compensation_enable)&& (!connected.BMP)){
-		SET_TEMPPRESS_ERROR;
+		SET_ERROR(TEMPPRESS_ERROR);
 		}else{
-		CLEAR_TEMPPRESS_ERROR;
+		CLEAR_ERROR(TEMPPRESS_ERROR);;
 	}
 	return ;
 }
@@ -1707,8 +1703,8 @@ int main(void)
 	}
 	else // DEFECTIVE OPTIONS RECEIVED OR NO NETWORK
 	{
-		SET_OPTIONS_ERROR
-		SET_INIT_OFFLINE_ERROR
+		SET_ERROR(OPTIONS_ERROR);
+		SET_ERROR(INIT_OFFLINE_ERROR);
 	}
 	
 	
@@ -1719,7 +1715,7 @@ int main(void)
 
 	if(xbee_reset_connection())
 	{
-		if((dest_low = xbee_get_addr(DL_MSG_TYPE)) && (dest_high = xbee_get_addr(DH_MSG_TYPE)))
+		if(xbee_get_server_adrr())
 		{
 			
 			/*
@@ -1731,7 +1727,7 @@ int main(void)
 			}
 			*/
 			_delay_ms(2000);
-			if(!CHECK_NETWORK_ERROR)
+			if(!CHECK_ERROR(NETWORK_ERROR))
 			{
 				LCD_InitScreen_AddLine("...success!",0);
 				_delay_ms(2000);
@@ -1746,8 +1742,8 @@ int main(void)
 				}
 				else // DEFECTIVE OPTIONS RECEIVED
 				{
-					SET_OPTIONS_ERROR
-					SET_INIT_OFFLINE_ERROR
+					SET_ERROR(OPTIONS_ERROR);
+					SET_ERROR(INIT_OFFLINE_ERROR);
 				}
 				
 			}
@@ -1755,7 +1751,7 @@ int main(void)
 			{ // No stable Connection was reached
 				LCD_InitScreen_AddLine("...failed!",0);
 				LCD_InitScreen_AddLine("offline mode",0);
-				SET_INIT_OFFLINE_ERROR
+				SET_ERROR(INIT_OFFLINE_ERROR);
 			}
 
 
@@ -1766,7 +1762,7 @@ int main(void)
 	{
 		LCD_InitScreen_AddLine("...failed!",0);
 		LCD_InitScreen_AddLine("offline mode",0);
-		SET_INIT_OFFLINE_ERROR
+		SET_ERROR(INIT_OFFLINE_ERROR);
 
 	} // end of if(ex_errorCode != ex_errorCode_Offline)
 	#endif
@@ -1777,7 +1773,7 @@ int main(void)
 	
 	// faulty options, BMP, DS3231M, or no connection on Startup all lead to Error State
 	//
-	if ((CHECK_INIT_OFFLINE_ERROR) || (CHECK_TEMPPRESS_ERROR) || (CHECK_TIMER_ERROR )|| (CHECK_OPTIONS_ERROR))
+	if ((CHECK_ERROR(INIT_OFFLINE_ERROR)) || (CHECK_ERROR(TEMPPRESS_ERROR)) || (CHECK_ERROR(TIMER_ERROR) )|| (CHECK_ERROR(OPTIONS_ERROR)))
 	{
 		while (1)
 		{
@@ -1786,24 +1782,24 @@ int main(void)
 			_delay_ms(2000);
 			//==============================================
 			//Initially Offline
-			if(CHECK_INIT_OFFLINE_ERROR){
+			if(CHECK_ERROR(INIT_OFFLINE_ERROR)){
 				LCD_InitScreen_AddLine("Init Offline",0);
 				_delay_ms(2000);
 			}
 			//==============================================
 			//Faulty Options Received
-			if(CHECK_OPTIONS_ERROR){
+			if(CHECK_ERROR(OPTIONS_ERROR)){
 				LCD_InitScreen_AddLine("Faulty Opts.",0);
 				_delay_ms(2000);
 			}
 			//==============================================
 			//BMP or DS3231M error
-			if (CHECK_TEMPPRESS_ERROR )
+			if (CHECK_ERROR(TEMPPRESS_ERROR) )
 			{
 				LCD_InitScreen_AddLine("BMP Error",0);
 				_delay_ms(2000);
 			}
-			if (CHECK_TIMER_ERROR)
+			if (CHECK_ERROR(TIMER_ERROR))
 			{
 				LCD_InitScreen_AddLine("DS3231M Err",0);
 				_delay_ms(2000);
@@ -1816,8 +1812,8 @@ int main(void)
 		//MEASUREMENT BLOCK
 		if (connected.BMP){ // measurement is only done if T OR P compensation is enabled
 			if(BMP_Temp_and_Pressure()){
-				SET_TEMPPRESS_ERROR;
-				status.device_reset_on_Send |= status.device;
+				SET_ERROR(TEMPPRESS_ERROR);;
+				status_ms_bytes.device_reset_on_Send |= status_ms_bytes.device;
 			}
 		}
 		Temp_Press_CorrectedVolume(dest_low,dest_high);
@@ -1826,7 +1822,7 @@ int main(void)
 		//SENDING BLOCK
 		Collect_Measurement_Data(&dest_high, &dest_low);
 
-		if (CHECK_NETWORK_ERROR)
+		if (CHECK_ERROR(NETWORK_ERROR))
 		{
 			sendbuffer[MEASUREMENT_MESSAGE_LENGTH-1]= 0; //delete Status byte
 			store_measurement();
@@ -1835,11 +1831,11 @@ int main(void)
 		else
 		{
 			// send Measurement Data to Server
-			if( 0xFF ==xbee_send_request(CMD_send_data_91,sendbuffer,MEASUREMENT_MESSAGE_LENGTH,&dest_high,&dest_low))
+			if( 0xFF ==xbee_send_request(CMD_send_data_91,sendbuffer,MEASUREMENT_MESSAGE_LENGTH))
 			{
 				LCD_paint_info_line("No Ack",0);
 				_delay_ms(500);
-				SET_NETWORK_ERROR
+				SET_ERROR(NETWORK_ERROR);
 				analyze_Connection(&dest_high,&dest_low);
 				
 				
@@ -1905,7 +1901,7 @@ int main(void)
 				if (!BMP_Connected()){
 					connected.BMP = 1;
 					connected.TWI = 1;
-					init_BMP();
+					init_BMP(&LCD_paint_info_line);
 				}
 			}
 			
@@ -1918,12 +1914,12 @@ int main(void)
 				
 				if(BMP_Temp_and_Pressure())
 				{
-					SET_I2C_BUS_ERROR;
-					SET_TEMPPRESS_ERROR;
+					SET_ERROR(I2C_BUS_ERROR);;
+					SET_ERROR(TEMPPRESS_ERROR);;
 					
 
 					
-					status.device_reset_on_Send |= status.device;
+					status_ms_bytes.device_reset_on_Send |= status_ms_bytes.device;
 					
 					// Quick Bus recovery to recover from short disturbances, the Server was notified regardless
 					LCD_paint_info_line("clrI2C",1);
@@ -1935,8 +1931,8 @@ int main(void)
 					if(!i2cState){
 						if (!BMP_Temp_and_Pressure())
 						{
-							CLEAR_TEMPPRESS_ERROR;
-							CLEAR_I2C_BUS_ERROR;
+							CLEAR_ERROR(TEMPPRESS_ERROR);;
+							CLEAR_ERROR(I2C_BUS_ERROR);;
 							connected.BMP =1 ;
 							}else{
 							connected.BMP = 0;
@@ -1946,9 +1942,9 @@ int main(void)
 				}
 				else
 				{
-					CLEAR_TEMPPRESS_ERROR;
+					CLEAR_ERROR(TEMPPRESS_ERROR);;
 					
-					CLEAR_I2C_BUS_ERROR;
+					CLEAR_ERROR(I2C_BUS_ERROR);;
 
 				}
 				
@@ -1992,15 +1988,15 @@ int main(void)
 		if((delta.t_send >= options.t_transmission_max * 60)|| //
 		(delta.t_send >= options.t_transmission_min && delta.Volume_since_last_send > options.delta_V)||
 		(delta.t_send >= options.t_transmission_min && delta.Pressure_since_last_send > options.delta_p)||
-		(delta.t_send >= options.t_transmission_min && status.device_reset_on_Send) )
+		(delta.t_send >= options.t_transmission_min && status_ms_bytes.device_reset_on_Send) )
 		{
 
 			
 
 			Collect_Measurement_Data(&dest_high, &dest_low);
 			// reset cached error bits;
-			status.device_reset_on_Send = 0;
-			if (CHECK_NETWORK_ERROR)
+			status_ms_bytes.device_reset_on_Send = 0;
+			if (CHECK_ERROR(NETWORK_ERROR))
 			{
 				store_measurement();
 				
@@ -2008,11 +2004,11 @@ int main(void)
 			else
 			{
 				// send Measurement Data to Server
-				if( 0xFF ==xbee_send_request(CMD_send_data_91,sendbuffer,MEASUREMENT_MESSAGE_LENGTH,&dest_high,&dest_low))
+				if( 0xFF ==xbee_send_request(CMD_send_data_91,sendbuffer,MEASUREMENT_MESSAGE_LENGTH))
 				{
 					LCD_paint_info_line("No Ack",0);
 					_delay_ms(500);
-					SET_NETWORK_ERROR
+					SET_ERROR(NETWORK_ERROR);
 					analyze_Connection(&dest_high,&dest_low);
 				}
 			}
@@ -2038,7 +2034,7 @@ int main(void)
 		{
 			last.time_I2C_check = count_t_elapsed;
 			
-			if(!connected.TWI || !connected.DS3231M || (!connected.BMP && connected.BMP_on_Startup) || CHECK_I2C_BUS_ERROR)
+			if(!connected.TWI || !connected.DS3231M || (!connected.BMP && connected.BMP_on_Startup) || CHECK_ERROR(I2C_BUS_ERROR))
 			{
 				
 				uint8_t i2cState = I2C_ClearBus();
@@ -2058,10 +2054,10 @@ int main(void)
 				if(!i2cState)
 				{
 					
-					DS3231M_read_time(0);
-					if(!CHECK_TIMER_ERROR)
+					DS3231M_read_time();
+					if(!CHECK_ERROR(TIMER_ERROR))
 					{
-						CLEAR_I2C_BUS_ERROR;
+						CLEAR_ERROR(I2C_BUS_ERROR);;
 						LCD_String("DS3231M OK",0,3);
 						}else{
 						LCD_String("DS3231M NO",0,3);
@@ -2072,8 +2068,8 @@ int main(void)
 					if (!BMP_Temp_and_Pressure())
 					{
 						LCD_String("TEM/PRES OK",0,2);
-						CLEAR_TEMPPRESS_ERROR;
-						CLEAR_I2C_BUS_ERROR;
+						CLEAR_ERROR(TEMPPRESS_ERROR);;
+						CLEAR_ERROR(I2C_BUS_ERROR);;
 						connected.BMP =1 ;
 					}
 					else
@@ -2180,11 +2176,11 @@ int main(void)
 			if (count_t_elapsed % Reconnect_Interval == 2){
 				#ifdef USE_XBEE
 				
-				if (!xbee_reconnect(&dest_low,&dest_high))
+				if (!xbee_reconnect())
 				{
 					//Associated
-					CLEAR_NETWORK_ERROR;
-					CLEAR_NO_REPLY_ERROR;
+					CLEAR_ERROR(NETWORK_ERROR);;
+					CLEAR_ERROR(NO_REPLY_ERROR);;
 					if(!ping_server(&dest_high,&dest_low)){
 						LCD_paint_info_line("NoServ",0);
 						NetStatIndex = 2;
@@ -2192,8 +2188,8 @@ int main(void)
 					}
 					else{
 						ex_mode = ex_mode_online;
-						CLEAR_NETWORK_ERROR;
-						CLEAR_NO_REPLY_ERROR;
+						CLEAR_ERROR(NETWORK_ERROR);;
+						CLEAR_ERROR(NO_REPLY_ERROR);;
 						
 					}
 					
@@ -2213,7 +2209,7 @@ int main(void)
 					#ifdef USE_LAN
 					if(ping_server(&dest_high,&dest_low) || CE_received){
 						ex_mode = ex_mode_online;
-						CLEAR_NETWORK_ERROR;
+						CLEAR_ERROR(NETWORK_ERROR);;
 						CE_received = 0;
 						#endif
 						
@@ -2227,16 +2223,16 @@ int main(void)
 							LCD_InitScreen_AddLine("Sending Old",1);
 							LCD_InitScreen_AddLine("Datasets",0);
 							LCD_InitScreen_AddLine("Remaining:",0);
-							while (!CHECK_NETWORK_ERROR && ((numberMeasBuff) > 0))
+							while (!CHECK_ERROR(NETWORK_ERROR) && ((numberMeasBuff) > 0))
 							{
 								sprintf(print_temp,"%03d",numberMeasBuff);
 								LCD_String(print_temp,0,3);
 								memcpy(sendbuffer,measBuffer[firstMeasBuff].data,MEASUREMENT_MESSAGE_LENGTH);
-								if( xbee_send_request(CMD_send_data_91,sendbuffer, MEASUREMENT_MESSAGE_LENGTH, &dest_high, &dest_low) == 0xFF  )
+								if( xbee_send_request(CMD_send_data_91,sendbuffer, MEASUREMENT_MESSAGE_LENGTH) == 0xFF  )
 								{//=========================
 									LCD_paint_info_line("No Ack",0);
 									_delay_ms(500);
-									SET_NETWORK_ERROR
+									SET_ERROR(NETWORK_ERROR);
 									reset_display();
 									break;
 									
@@ -2256,7 +2252,7 @@ int main(void)
 									}
 									
 								}
-							}//while (!CHECK_NETWORK_ERROR && ((numberMeasBuff) > 0))
+							}//while (!CHECK_ERROR(NETWORK_ERROR) && ((numberMeasBuff) > 0))
 							reset_display();
 						}//if (numberMeasBuff > 0)
 					}// reconnect successful

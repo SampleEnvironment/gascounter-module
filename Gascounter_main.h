@@ -175,19 +175,9 @@ typedef struct{
 
 
 
-/**
-* @brief Connection Status of BMP and DS3231M
-*
-* Holds the Status of the connection to the BMP sensor (Pressure and Temperature Sensor) and the DS3231M (Time and Date) Chip.
-*/
-typedef struct{
-	uint8_t BMP;  /**< @brief BMP Connection */
-	uint8_t BMP_on_Startup; /** @brief BMP connected on Startup */
-	uint8_t DS3231M; /**< @brief DS3231M Connection */
-	uint8_t TWI; /**< @brief  Indication of TWI bue connectivity for preventing loops  */
-}connectedType;
 
-extern connectedType connected;
+
+
 
 
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c%i%i%i%i"
@@ -246,7 +236,7 @@ typedef struct
 }statusType;
 
 
-extern volatile statusType status;
+extern volatile statusType status_ms_bytes;
 extern volatile uint8_t Xbee_Associated;
 extern uint16_t ex_mode;
 
@@ -283,32 +273,32 @@ extern uint16_t ex_mode;
 #define status_bit_set_offsets_96				0
 
 
-#define SET_NETWORK_ERROR 				status.device|=(1<<0);ex_mode = ex_mode_offline;
-#define SET_NO_REPLY_ERROR 				status.device|=(1<<1);
-#define SET_OPTIONS_ERROR 				status.device|=(1<<2);status.device_reset_on_Send |= status.device;
-#define SET_TEMPPRESS_ERROR 			status.device|=(1<<3);status.device_reset_on_Send |= status.device;
-#define SET_TIMER_ERROR					status.device|=(1<<4);status.device_reset_on_Send |= status.device;
-#define SET_INIT_OFFLINE_ERROR          status.device|=(1<<5);
-#define SET_I2C_BUS_ERROR				status.device|=(1<<6);status.device_reset_on_Send |= status.device;
-#define SET_VOLUME_TOO_BIG_ERROR		status.device|=(1<<7);status.device_reset_on_Send |= status.device;
+// nw error		status.device|=(1<<0);ex_mode = ex_mode_offline;
+//no reply			status.device|=(1<<1);
+//#define SET_ERROR(OPTIONS_ERROR); 				status.device|=(1<<2);status.device_reset_on_Send |= status.device;
+//#define SET_ERROR(TEMPPRESS_ERROR); 			status.device|=(1<<3);status.device_reset_on_Send |= status.device;
+//#define SET_ERROR(TIMER_ERROR);					status.device|=(1<<4);status.device_reset_on_Send |= status.device;
+//#define SET_ERROR(INIT_OFFLINE_ERROR);          status.device|=(1<<5);
+//#define SET_ERROR(I2C_BUS_ERROR);				status.device|=(1<<6);status.device_reset_on_Send |= status.device;
+//#define SET_ERROR(VOLUME_TOO_BIG_ERROR);		status.device|=(1<<7);status.device_reset_on_Send |= status.device;
 
-#define CLEAR_NETWORK_ERROR 			status.device&=~(1<<0);ex_mode = ex_mode_online;
-#define CLEAR_NO_REPLY_ERROR 			status.device&=~(1<<1);
-#define CLEAR_OPTIONS_ERROR 			status.device&=~(1<<2);
-#define CLEAR_TEMPPRESS_ERROR 			status.device&=~(1<<3);
-#define CLEAR_TIMER_ERROR			    status.device&=~(1<<4);
-#define CLEAR_INIT_OFFLINE_ERROR        status.device&=~(1<<5);
-#define CLEAR_I2C_BUS_ERROR             status.device&=~(1<<6);
-#define CLEAR_VOLUME_TOO_BIG_ERROR		status.device&=~(1<<7);
+//#define CLEAR_ERROR(NETWORK_ERROR); 			status.device&=~(1<<0);ex_mode = ex_mode_online;
+//#define CLEAR_ERROR(NO_REPLY_ERROR); 			status.device&=~(1<<1);
+//#define CLEAR_ERROR(OPTIONS_ERROR); 			status.device&=~(1<<2);
+//#define CLEAR_ERROR(TEMPPRESS_ERROR); 			status.device&=~(1<<3);
+//#define CLEAR_ERROR(TIMER_ERROR);			    status.device&=~(1<<4);
+//#define CLEAR_ERROR(INIT_OFFLINE_ERROR);        status.device&=~(1<<5);
+//#define CLEAR_ERROR(I2C_BUS_ERROR);             status.device&=~(1<<6);
+//#define CLEAR_ERROR(VOLUME_TOO_BIG_ERROR);		status.device&=~(1<<7);
 
-#define CHECK_NETWORK_ERROR 			(status.device & (1<<0))
-#define CHECK_NO_REPLY_ERROR 			(status.device & (1<<1))
-#define CHECK_OPTIONS_ERROR 			(status.device & (1<<2))
-#define CHECK_TEMPPRESS_ERROR 			(status.device & (1<<3))
-#define CHECK_TIMER_ERROR				(status.device & (1<<4))
-#define CHECK_INIT_OFFLINE_ERROR        (status.device & (1<<5))
-#define CHECK_I2C_BUS_ERROR				(status.device & (1<<6))
-#define CHECK_VOLUME_TOO_BIG_ERROR      (status.device & (1<<7))
+//#define CHECK_ERROR(NETWORK_ERROR) 			(status.device & (1<<0))
+//#define CHECK_ERROR(NO_REPLY_ERROR) 			(status.device & (1<<1))
+//#define CHECK_ERROR(OPTIONS_ERROR) 			(status.device & (1<<2))
+//#define CHECK_ERROR(TEMPPRESS_ERROR) 			(status.device & (1<<3))
+//#define CHECK_ERROR(TIMER_ERROR)				(status.device & (1<<4))
+//#define CHECK_ERROR(INIT_OFFLINE_ERROR)        (status.device & (1<<5))
+//#define CHECK_ERROR(I2C_BUS_ERROR)				(status.device & (1<<6))
+//#define CHECK_ERROR(VOLUME_TOO_BIG_ERROR)      (status.device & (1<<7))
 
 
 /* a=target variable, b=bit number to act upon 0-n */
@@ -338,7 +328,7 @@ extern uint16_t ex_mode;
 #define CMD_send_response_options_set_93		93 /**< @brief Sent to the server after options were received and set (#CMD_received_set_options_96) */
 #define CMD_send_response_send_data_94			94 /**< @brief Same as #CMD_send_data_91, but it is only sent as an answer to a #CMD_received_send_data_97 message   */
 
-#define LAST_NON_CMD_MSG		95		// Search no ack commands only (see xbee_hasReply)
+
 
 // Requests sent from the database server
 #define CMD_received_Pong_89					89 /**< @brief Command is received as an answer to a #CMD_send_Ping_95 message*/
