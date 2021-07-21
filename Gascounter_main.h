@@ -27,7 +27,7 @@
 // LAN OR XBEE
 // =========================================================================
 //#define USE_LAN /**< @brief LAN Hardware Variant*/
-#define USE_XBEE /**< @brief Xbee Hardware Variant*/
+//#define USE_XBEE /**< @brief Xbee Hardware Variant*/
 //=========================================================================
 
 
@@ -202,9 +202,13 @@ extern volatile uint32_t count_t_elapsed;
 extern volatile usartType USART;
 
 
-#define  ex_mode_online			   	1 /**< @brief  Normal Operation  */
-#define  ex_mode_offline		   64 /**< @brief  Offline mode measurements are saved in #measBuffer  */
-#define  ex_mode_error			  128 /**< @brief  Nonrecoverable ERROR State  */
+
+enum PARENT_MODE
+{
+	offline,
+	online
+};
+
 
 
 //==============================================================
@@ -231,14 +235,13 @@ typedef struct
 	//uint8_t byte_94;    always equals byte_91
 	uint8_t byte_95; /**< @brief sent with every Ping (#CMD_send_Ping_95). Currently always set to zero. */
 	uint8_t byte_96; /**< @brief  received with Options from the Server. Indicates wether Volume-offsets should be kept or updated */
-	uint8_t device;  /**< @brief  Status-Byte for internal processing and handling execution states.More detailed explanation in...*/
-	uint8_t device_reset_on_Send;
 }statusType;
 
 
 extern volatile statusType status_ms_bytes;
 extern volatile uint8_t Xbee_Associated;
-extern uint16_t ex_mode;
+extern enum PARENT_MODE ex_mode;
+extern uint16_t status_reset_on_send;
 
 
 // I²C Codes
@@ -350,14 +353,14 @@ void init_timer(void);
 void init_interrupts(void);
 
 void displayTemPreVol(void);
-void Temp_Press_CorrectedVolume(uint32_t dest_low,uint32_t dest_high);
+void Temp_Press_CorrectedVolume(void);
 void PT_Plausibility(void);
 void reset_display(void);
 void Funtrace_enter(uint8_t Function_ID);
-uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer, uint32_t dest_high, uint32_t dest_low);
-void execute_server_CMDS(uint8_t reply_id,uint32_t dest_high, uint32_t dest_low);
-uint8_t ping_server(uint32_t *dest_high,uint32_t *dest_low);
-void Set_Options(uint8_t *optBuffer,uint32_t dest_high,uint32_t dest_low);
-uint8_t analyze_Connection(uint32_t *dest_high,uint32_t *dest_low);
+uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer);
+void execute_server_CMDS(uint8_t reply_id);
+uint8_t ping_server(void);
+void Set_Options(uint8_t *optBuffer);
+uint8_t analyze_Connection(void);
 
 #endif  // Gascounter_main.h

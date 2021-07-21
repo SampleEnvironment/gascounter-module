@@ -59,7 +59,7 @@
 *
 * Contains Status-bytes for internal and external Status processing and reporting
 */
-volatile statusType status_ms_bytes={.byte_90=0,  .byte_92=0,  .byte_95=0, .byte_96=0, .device=0,.device_reset_on_Send = 0};
+volatile statusType status_ms_bytes={.byte_90=0,  .byte_92=0,  .byte_95=0, .byte_96=0};
 
 
 /************************************************************************/
@@ -133,7 +133,7 @@ optType options = {.offsetValue = default_offsetValue,
 * 2. #ex_mode_offline: Gascounter has lost the connection to the Server, but other than that no Errors have occurred. Saved Datea is sent on Reconnect
 * 3. #ex_mode_error: Error State that can not be rcovered from. An admin has to resolve the issues
 */
-uint16_t	ex_mode = ex_mode_online;
+enum PARENT_MODE ex_mode = online;
 
 
 
@@ -324,7 +324,7 @@ void Funtrace_enter(uint8_t Function_ID){
 *
 * @return void
 */
-void Collect_Measurement_Data(uint32_t *dest_high, uint32_t *dest_low){
+void Collect_Measurement_Data(void){
 	FUNCTION_TRACE
 
 	Funtrace_enter(1);
@@ -357,8 +357,9 @@ void Collect_Measurement_Data(uint32_t *dest_high, uint32_t *dest_low){
 		{
 			LCD_paint_info_line("NoPong",0);
 			_delay_ms(500);
-			SET_ERROR(NETWORK_ERROR);;
-			analyze_Connection(dest_high,dest_low);
+			SET_ERROR(NETWORK_ERROR);
+			ex_mode = offline;
+			analyze_Connection();
 			
 		}
 		else
@@ -387,7 +388,7 @@ void Collect_Measurement_Data(uint32_t *dest_high, uint32_t *dest_low){
 		gmtime_r(&Time_Estimate,&Time);
 		Time.tm_year -= 100;
 		
-		Time.tm_mon += 1; // time.h mon range only goes from 0..11 
+		Time.tm_mon += 1; // time.h mon range only goes from 0..11
 		
 		sendbuffer[0] = Time.tm_sec;
 		sendbuffer[1] = Time.tm_min;
@@ -422,15 +423,15 @@ void Collect_Measurement_Data(uint32_t *dest_high, uint32_t *dest_low){
 	
 	uint8_t curr_Stat = 0;
 	
-	if(BIT_CHECK(status_ms_bytes.device_reset_on_Send,2)){BIT_SET(curr_Stat,status_bit_option_err_91);}
+	if(BIT_CHECK(status_reset_on_send,OPTIONS_ERROR)){BIT_SET(curr_Stat,status_bit_option_err_91);}
 	
-	if(BIT_CHECK(status_ms_bytes.device_reset_on_Send,3)){BIT_SET(curr_Stat,status_bit_Temp_Press_Err_91);}
+	if(BIT_CHECK(status_reset_on_send,TEMPPRESS_ERROR)){BIT_SET(curr_Stat,status_bit_Temp_Press_Err_91);}
 	
-	if (BIT_CHECK(status_ms_bytes.device_reset_on_Send,7)){BIT_SET(curr_Stat,status_bit_volume_too_big_91);}
+	if (BIT_CHECK(status_reset_on_send,VOLUME_TOO_BIG_ERROR)){BIT_SET(curr_Stat,status_bit_volume_too_big_91);}
 	
-	if(BIT_CHECK(status_ms_bytes.device_reset_on_Send,4)){BIT_SET(curr_Stat,status_bit_DS3231M_err_91);}
+	if(BIT_CHECK(status_reset_on_send,TIMER_ERROR)){BIT_SET(curr_Stat,status_bit_DS3231M_err_91);}
 	
-	if(BIT_CHECK(status_ms_bytes.device_reset_on_Send,6)){BIT_SET(curr_Stat,status_bit_I2C_err_91);}
+	if(BIT_CHECK(status_reset_on_send,I2C_BUS_ERROR)){BIT_SET(curr_Stat,status_bit_I2C_err_91);}
 	
 	
 
@@ -504,11 +505,13 @@ void init(void)
 	init_LCD();
 	
 	_delay_ms(500);
+	version_INIT(FIRMWARE_VERSION,BRANCH_ID,FIRMWARE_VERSION);
 	
 	init_ports();
 	
+	
 	LCD_InitScreen_AddLine("HZB Gascount",1);
-	sprintf(print_temp,"v%i.%i",Branch_id,Fw_version);
+	sprintf(print_temp,"v%i.%i",version.Branch_id,version.Fw_version);
 	LCD_InitScreen_AddLine(print_temp,0);
 	#ifdef USE_LAN
 	LCD_InitScreen_AddLine("LAN-VARIANT",0);
@@ -583,7 +586,13 @@ void init(void)
 		LCD_InitScreen_AddLine(" ",0);
 
 	}
+	
+	
+	xbee_init(&LCD_paint_info_line,NULL,0);
+	
+	xbee_hardware_version();
 	LCD_InitScreen_AddLine("Init done",0);
+	
 }
 
 
@@ -655,7 +664,7 @@ void displayTemPreVol(void){
 	LCD_String(print_temp,0,0);
 	
 	sprintf(print_temp,"%i.%i.20%i",Time.tm_mday,Time.tm_mon,Time.tm_year);
-		LCD_String(print_temp,0,0);
+	LCD_String(print_temp,0,0);
 	
 	*/
 	
@@ -790,7 +799,7 @@ void displayTemPreVol(void){
 	
 	activity_indicator++;
 	
-	if (ex_mode == ex_mode_online)
+	if (ex_mode == online)
 	{
 		
 		LCD_paint_info_line(NetStat[0],0);
@@ -832,9 +841,9 @@ void displayTemPreVol(void){
 *
 * @return void
 */
-void Temp_Press_CorrectedVolume(uint32_t dest_low,uint32_t dest_high){
-	FUNCTION_TRACE
-	Funtrace_enter(4);
+void Temp_Press_CorrectedVolume(void)
+{
+
 	if(!CHECK_ERROR(TEMPPRESS_ERROR) && connected.TWI){ // only updated when BMP is connected
 		
 		Temperature_value = BMP_Temperature;
@@ -861,10 +870,6 @@ void Temp_Press_CorrectedVolume(uint32_t dest_low,uint32_t dest_high){
 		LCD_Clear_row_from_column(6, 5);
 		LCD_String("Overfl.", 6, 5);
 		#endif
-
-		
-		status_ms_bytes.device_reset_on_Send |= status_ms_bytes.device;
-
 	}
 	
 	old.Value = options.Value;
@@ -880,8 +885,6 @@ void Temp_Press_CorrectedVolume(uint32_t dest_low,uint32_t dest_high){
 		LCD_String("Overfl.", 6, 5);
 		#endif
 
-
-		status_ms_bytes.device_reset_on_Send |= status_ms_bytes.device;
 	}
 	
 	old.Volume = options.Volume;
@@ -1071,9 +1074,9 @@ void reset_display(void){
 *
 * @return uint8_t 0xFF if bad options were received otherwise the return value is the index in #frameBuffer where the answer from the server is stored
 */
-uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer, uint32_t dest_high, uint32_t dest_low)
+uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer)
 {
-	FUNCTION_TRACE
+
 	
 	#ifdef ALLOW_LOGIN
 	uint8_t reply_Id = 0;
@@ -1085,8 +1088,6 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer, uint32_t dest_
 
 	buffer[0] = status_ms_bytes.byte_90;
 	
-	// Pack frame
-	uint8_t temp_bytes_number = xbee_pack_tx64_frame(db_cmd_type, buffer,1 , dest_high, dest_low);
 	
 	// Try to send login message "number_trials" times
 	#ifdef USE_LAN
@@ -1098,7 +1099,7 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer, uint32_t dest_
 	
 	while(number_trials)
 	{
-		reply_Id = xbee_send_and_get_reply(buffer, temp_bytes_number, db_cmd_type, 3000);
+		reply_Id = xbee_send_request_only(db_cmd_type, buffer, 1);
 		
 		//#ifdef ALLOW_DEBUG
 		//sprintf(print_temp,"%i",reply_Id);
@@ -1110,6 +1111,7 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer, uint32_t dest_
 		if(reply_Id != 0xFF)
 		{
 			LCD_InitScreen_AddLine("...data rec.",0);
+			_delay_ms(1000);
 			//sprintf(print_temp,"%i",frameBuffer[reply_Id].data_len);
 			//LCD_InitScreen_AddLine(print_temp,0);
 			
@@ -1153,19 +1155,19 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer, uint32_t dest_
 *
 * @return void
 */
-void execute_server_CMDS(uint8_t reply_id,uint32_t dest_high, uint32_t dest_low){
+void execute_server_CMDS(uint8_t reply_id){
 	FUNCTION_TRACE
 	Funtrace_enter(7);
 	switch (frameBuffer[reply_id].type)
 	{
 		//=================================================================
 		case CMD_received_set_options_96:// set received Options
-		Set_Options(frameBuffer[reply_id].data,dest_high,dest_low);
+		Set_Options(frameBuffer[reply_id].data);
 		break;
 		
 		//=================================================================
 		case CMD_received_send_data_97: // Send Measurement Data immediately
-		Collect_Measurement_Data(&dest_high, &dest_low);
+		Collect_Measurement_Data();
 		xbee_send_message(CMD_send_response_send_data_94,sendbuffer,MEASUREMENT_MESSAGE_LENGTH);
 		break;
 		
@@ -1303,14 +1305,14 @@ void execute_server_CMDS(uint8_t reply_id,uint32_t dest_high, uint32_t dest_low)
 		
 		break;
 		
-	
+		
 
 
 
 		#ifdef USE_LAN
-		case CMD_received_simulate_xBee:
+		case CMD_received_simulate_xBee_100:
 		
-		if (ex_mode == ex_mode_offline)
+		if (ex_mode == offline)
 		{
 			CE_received = 1;
 
@@ -1341,13 +1343,12 @@ void execute_server_CMDS(uint8_t reply_id,uint32_t dest_high, uint32_t dest_low)
 *
 * @return uint8_t 1 if Ping successful and 0 if no Pong was received
 */
-uint8_t ping_server(uint32_t *dest_high,uint32_t *dest_low)
+uint8_t ping_server(void)
 {
-	Funtrace_enter(8);
-	FUNCTION_TRACE
 	
 	#ifdef USE_LAN
 	CLEAR_ERROR(NETWORK_ERROR);
+	
 	#endif
 	buffer[0]= status_ms_bytes.byte_95; // Ping Status Byte is always 0
 	if( 0xFF == xbee_send_request(CMD_send_Ping_95,buffer,1))
@@ -1355,6 +1356,7 @@ uint8_t ping_server(uint32_t *dest_high,uint32_t *dest_low)
 		LCD_paint_info_line("NoPong",0);
 		_delay_ms(500);
 		SET_ERROR(NETWORK_ERROR);
+		ex_mode = offline;
 		return 0;
 	}
 	else
@@ -1389,7 +1391,7 @@ uint8_t ping_server(uint32_t *dest_high,uint32_t *dest_low)
 *
 * @return uint8_t 1 if online and 0 if there are any problems with the connection to the server
 */
-uint8_t analyze_Connection(uint32_t *dest_high,uint32_t *dest_low)
+uint8_t analyze_Connection(void)
 {
 	FUNCTION_TRACE
 	Funtrace_enter(9);
@@ -1400,15 +1402,17 @@ uint8_t analyze_Connection(uint32_t *dest_high,uint32_t *dest_low)
 	if (!xbee_reconnect())
 	{
 		//Associated
-		CLEAR_ERROR(NETWORK_ERROR);;
-		CLEAR_ERROR(NO_REPLY_ERROR);;
-		if(!ping_server(dest_high,dest_low)){
+		ex_mode = online;
+		CLEAR_ERROR(NETWORK_ERROR);
+		
+		CLEAR_ERROR(NO_REPLY_ERROR);
+		if(!ping_server()){
 			LCD_paint_info_line("NoServ",0);
 			NetStatIndex = 2;
 			return 0;
 		}
 		else{
-			ex_mode = ex_mode_online;
+			ex_mode = online;
 			CLEAR_ERROR(NETWORK_ERROR);;
 			CLEAR_ERROR(NO_REPLY_ERROR);;
 			return 1;
@@ -1442,7 +1446,7 @@ uint8_t analyze_Connection(uint32_t *dest_high,uint32_t *dest_low)
 *
 * @return void
 */
-void Set_Options(uint8_t *optBuffer,uint32_t dest_high,uint32_t dest_low){
+void Set_Options(uint8_t *optBuffer){
 	FUNCTION_TRACE
 	
 	Funtrace_enter(10);
@@ -1579,7 +1583,7 @@ void Set_Options(uint8_t *optBuffer,uint32_t dest_high,uint32_t dest_low){
 		BIT_SET(sendbuffer[0],status_bit_success_setting_options_93);  // not successfully accepted
 		SET_ERROR(OPTIONS_ERROR);
 		xbee_send_message(CMD_send_response_options_set_93,sendbuffer,1);
-		//ex_mode = ex_mode_error;
+
 		return ;
 	}
 	
@@ -1676,13 +1680,7 @@ int main(void)
 	uint8_t 	buffer[SINGLE_FRAME_LENGTH];
 
 
-	//=========================================================================
-	// XBee variables
-	//=========================================================================
-	uint32_t 	dest_low = 0;	//0x1234;
-	uint32_t 	dest_high = 0;	//0x5678;
 
-	
 
 	//=========================================================================
 	// Display connection is in progress
@@ -1696,10 +1694,10 @@ int main(void)
 	//=========================================================================
 	#ifdef USE_LAN
 
-	uint8_t reply_id = xbee_send_login_msg(CMD_send_registration_90, buffer, dest_high, dest_low);
+	uint8_t reply_id = xbee_send_login_msg(CMD_send_registration_90, buffer);
 	
 	if (reply_id!= 0xFF ){ // GOOD OPTIONS RECEIVED
-		Set_Options(frameBuffer[reply_id].data,dest_high,dest_low);
+		Set_Options(frameBuffer[reply_id].data);
 	}
 	else // DEFECTIVE OPTIONS RECEIVED OR NO NETWORK
 	{
@@ -1735,10 +1733,10 @@ int main(void)
 				// Device Login
 				//=========================================================================
 
-				uint8_t reply_id = xbee_send_login_msg(CMD_send_registration_90, buffer, dest_high, dest_low);
+				uint8_t reply_id = xbee_send_login_msg(CMD_send_registration_90, buffer);
 				
 				if (reply_id!= 0xFF ){ // GOOD OPTIONS RECEIVED
-					Set_Options(frameBuffer[reply_id].data,dest_high,dest_low);
+					Set_Options(frameBuffer[reply_id].data);
 				}
 				else // DEFECTIVE OPTIONS RECEIVED
 				{
@@ -1808,19 +1806,18 @@ int main(void)
 	}else  // One measure send cycle on startup
 
 	{
-		
 		//MEASUREMENT BLOCK
 		if (connected.BMP){ // measurement is only done if T OR P compensation is enabled
 			if(BMP_Temp_and_Pressure()){
 				SET_ERROR(TEMPPRESS_ERROR);;
-				status_ms_bytes.device_reset_on_Send |= status_ms_bytes.device;
+
 			}
 		}
-		Temp_Press_CorrectedVolume(dest_low,dest_high);
+		Temp_Press_CorrectedVolume();
 		displayTemPreVol();
 		
 		//SENDING BLOCK
-		Collect_Measurement_Data(&dest_high, &dest_low);
+		Collect_Measurement_Data();
 
 		if (CHECK_ERROR(NETWORK_ERROR))
 		{
@@ -1836,7 +1833,8 @@ int main(void)
 				LCD_paint_info_line("No Ack",0);
 				_delay_ms(500);
 				SET_ERROR(NETWORK_ERROR);
-				analyze_Connection(&dest_high,&dest_low);
+				ex_mode = offline;
+				analyze_Connection();
 				
 				
 			}
@@ -1864,8 +1862,7 @@ int main(void)
 	//=========================================================================
 	// Main loop
 	//=========================================================================
-
-
+	
 
 	while(1)
 	{
@@ -1917,10 +1914,7 @@ int main(void)
 					SET_ERROR(I2C_BUS_ERROR);;
 					SET_ERROR(TEMPPRESS_ERROR);;
 					
-
-					
-					status_ms_bytes.device_reset_on_Send |= status_ms_bytes.device;
-					
+			
 					// Quick Bus recovery to recover from short disturbances, the Server was notified regardless
 					LCD_paint_info_line("clrI2C",1);
 					uint8_t i2cState = I2C_ClearBus();
@@ -1959,7 +1953,7 @@ int main(void)
 				
 			}
 			
-			Temp_Press_CorrectedVolume(dest_low,dest_high);
+			Temp_Press_CorrectedVolume();
 			displayTemPreVol();
 		}
 		
@@ -1988,14 +1982,14 @@ int main(void)
 		if((delta.t_send >= options.t_transmission_max * 60)|| //
 		(delta.t_send >= options.t_transmission_min && delta.Volume_since_last_send > options.delta_V)||
 		(delta.t_send >= options.t_transmission_min && delta.Pressure_since_last_send > options.delta_p)||
-		(delta.t_send >= options.t_transmission_min && status_ms_bytes.device_reset_on_Send) )
+		(delta.t_send >= options.t_transmission_min && status_reset_on_send) )
 		{
 
 			
 
-			Collect_Measurement_Data(&dest_high, &dest_low);
+			Collect_Measurement_Data();
 			// reset cached error bits;
-			status_ms_bytes.device_reset_on_Send = 0;
+			status_reset_on_send = 0;
 			if (CHECK_ERROR(NETWORK_ERROR))
 			{
 				store_measurement();
@@ -2009,7 +2003,8 @@ int main(void)
 					LCD_paint_info_line("No Ack",0);
 					_delay_ms(500);
 					SET_ERROR(NETWORK_ERROR);
-					analyze_Connection(&dest_high,&dest_low);
+					ex_mode = offline;
+					analyze_Connection();
 				}
 			}
 			
@@ -2110,7 +2105,7 @@ int main(void)
 			//==================================================================================================================
 			//                 ONLINE-MODE
 			//==================================================================================================================
-			case ex_mode_online:
+			case online:
 			//====================================================================================================================================
 
 
@@ -2128,8 +2123,8 @@ int main(void)
 				last.time_ping = count_t_elapsed;
 				
 				
-				if(!ping_server(&dest_high,&dest_low)){
-					if(!analyze_Connection(&dest_high,&dest_low)){
+				if(!ping_server()){
+					if(!analyze_Connection()){
 						break; // Ping unsuccessful --> offline Mode
 					}
 				}
@@ -2144,7 +2139,7 @@ int main(void)
 			uint8_t reply_id;
 			reply_id  = xbee_hasReply(LAST_NON_CMD_MSG,GREATER_THAN);
 			if (reply_id != 0xFF){
-				execute_server_CMDS(reply_id,dest_high,dest_low);
+				execute_server_CMDS(reply_id);
 			}
 			
 			
@@ -2155,7 +2150,7 @@ int main(void)
 			//==================================================================================================================
 			//                 OFFLINE-MODE
 			//==================================================================================================================
-			case ex_mode_offline: ;
+			case offline: ;
 			
 			//====================================================================================================================================
 
@@ -2163,7 +2158,7 @@ int main(void)
 
 			uint8_t reply_id_off  = xbee_hasReply(LAST_NON_CMD_MSG,GREATER_THAN);
 			if (reply_id_off != 0xFF){
-				execute_server_CMDS(reply_id_off,dest_high,dest_low);
+				execute_server_CMDS(reply_id_off);
 			}
 
 			#endif // _DEBUG
@@ -2178,16 +2173,17 @@ int main(void)
 				
 				if (!xbee_reconnect())
 				{
+					ex_mode = online;
 					//Associated
-					CLEAR_ERROR(NETWORK_ERROR);;
-					CLEAR_ERROR(NO_REPLY_ERROR);;
-					if(!ping_server(&dest_high,&dest_low)){
+					CLEAR_ERROR(NETWORK_ERROR);
+					CLEAR_ERROR(NO_REPLY_ERROR);
+					if(!ping_server()){
 						LCD_paint_info_line("NoServ",0);
 						NetStatIndex = 2;
 						
 					}
 					else{
-						ex_mode = ex_mode_online;
+						ex_mode = online;
 						CLEAR_ERROR(NETWORK_ERROR);;
 						CLEAR_ERROR(NO_REPLY_ERROR);;
 						
@@ -2203,12 +2199,12 @@ int main(void)
 
 				}
 				
-				if(ex_mode == ex_mode_online){
+				if(ex_mode == online){
 					
 					#endif
 					#ifdef USE_LAN
-					if(ping_server(&dest_high,&dest_low) || CE_received){
-						ex_mode = ex_mode_online;
+					if(ping_server() || CE_received){
+						ex_mode = online;
 						CLEAR_ERROR(NETWORK_ERROR);;
 						CE_received = 0;
 						#endif
@@ -2233,6 +2229,7 @@ int main(void)
 									LCD_paint_info_line("No Ack",0);
 									_delay_ms(500);
 									SET_ERROR(NETWORK_ERROR);
+									ex_mode = offline;
 									reset_display();
 									break;
 									
