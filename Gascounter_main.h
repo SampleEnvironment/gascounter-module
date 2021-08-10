@@ -18,7 +18,7 @@
 #define GC_MAIN_H
 
 
-#define FIRMWARE_VERSION  206 /**< @brief  Software Version  */
+#define FIRMWARE_VERSION  207 /**< @brief  Software Version  */
 
 #define BRANCH_ID 1 
 
