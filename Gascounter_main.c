@@ -364,6 +364,8 @@ void Collect_Measurement_Data(void){
 		}
 		else
 		{
+			
+			//TODO an neue avr lib anpassen
 			// Ping Successful --> time is set to the received time
 			sendbuffer[0] = answerbuffer[0];
 			sendbuffer[1] = answerbuffer[1];
@@ -1149,8 +1151,6 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer)
 * @brief Decodes incoming Messages from the Server and act accordingly
 *
 * @param reply_id index of the message in #frameBuffer which will be decoded
-* @param dest_high high 32-bit of coordinator address
-* @param dest_low  low  32-bit of coordinator address
 *
 *
 * @return void
@@ -1162,7 +1162,7 @@ void execute_server_CMDS(uint8_t reply_id){
 	{
 		//=================================================================
 		case CMD_received_set_options_96:// set received Options
-		Set_Options(frameBuffer[reply_id].data);
+		Set_Options((uint8_t*)frameBuffer[reply_id].data);
 		break;
 		
 		//=================================================================
@@ -1736,7 +1736,7 @@ int main(void)
 				uint8_t reply_id = xbee_send_login_msg(CMD_send_registration_90, buffer);
 				
 				if (reply_id!= 0xFF ){ // GOOD OPTIONS RECEIVED
-					Set_Options(frameBuffer[reply_id].data);
+					Set_Options((uint8_t*)frameBuffer[reply_id].data);
 				}
 				else // DEFECTIVE OPTIONS RECEIVED
 				{
@@ -2161,7 +2161,7 @@ int main(void)
 				execute_server_CMDS(reply_id_off);
 			}
 
-			#endif // _DEBUG
+			#endif 
 			
 			//=============================================================================================================================================
 			//     RECONNECT

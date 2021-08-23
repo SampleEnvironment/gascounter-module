@@ -173,6 +173,12 @@
     <Compile Include="assert.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="avr-util-library\adwandler.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="avr-util-library\adwandler.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="avr-util-library\BMP085.c">
       <SubType>compile</SubType>
     </Compile>
