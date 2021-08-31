@@ -30,6 +30,7 @@
 #include <stdbool.h>
 #include <time.h>
 
+
 #include "Gascounter_main.h"
 #include "usart.h"
 #include "xbee.h"
@@ -40,7 +41,7 @@
 #include "LCD.h"
 #include "I2C_utilities.h"
 #include "module_globals.h"
-
+#include "adwandler.h"
 #include "assert.h"
 
 
@@ -120,7 +121,9 @@ optType options = {.offsetValue = default_offsetValue,
 	.T_Compensation_enable = default_T_Compensation_enable,
 	.Temperature_norm = default_Temperature_norm,
 	.p_Compensation_enable = default_p_Compensation_enable,
-.Pressure_norm = default_Pressure_norm};
+	.Pressure_norm = default_Pressure_norm,
+	.Ping_Intervall = default_Ping_Intervall
+};
 
 /************************************************************************/
 /* Execution Mode                                                       */
@@ -157,12 +160,6 @@ volatile uint16_t count_Volume_steps = 0;
 /************************************************************************/
 /* Time Periods                                                         */
 /************************************************************************/
-/**
-* @brief Ping and Reconnect Period
-*
-* Time between Pings and reconnection attempts (in s)
-*/
-const uint16_t Reconnect_Interval = 60 *10;
 
 /**
 * @brief Display Reset Period
@@ -252,7 +249,7 @@ uint8_t numberMeasBuff = 0;	/**< @brief number of stored measurements   */
 
 uint8_t 	buffer[SINGLE_FRAME_LENGTH]; /**< @brief  Send and receive Buffer i.e. Option retreival or #ping_server() */
 uint8_t 	sendbuffer[SINGLE_FRAME_LENGTH]; /**< @brief Send only Buffer used for sending data to the server for which no reply is expected i.e. Measurement data #CMD_send_data_91*/
-uint8_t     answerbuffer[SINGLE_FRAME_LENGTH]; /**< @brief Contains Answer to the last sent Request*/
+
 
 #ifdef USE_LAN
 
@@ -353,7 +350,9 @@ void Collect_Measurement_Data(void){
 	if (!CHECK_ERROR(NETWORK_ERROR) && (!connected.TWI || CHECK_ERROR(TIMER_ERROR)) ) //  only way to get the current time when the TWI bus is locked or the last timereading was invalid but Network must be up
 	{
 		buffer[0]= status_ms_bytes.byte_95; // Ping Status Byte is always 0
-		if( 0xFF == xbee_send_request(CMD_send_Ping_95,buffer,1))
+		uint8_t reply_id = xbee_send_request(CMD_send_Ping_95,buffer,1);
+		
+		if( 0xFF == reply_id)
 		{
 			LCD_paint_info_line("NoPong",0);
 			_delay_ms(500);
@@ -365,14 +364,12 @@ void Collect_Measurement_Data(void){
 		else
 		{
 			
-			//TODO an neue avr lib anpassen
-			// Ping Successful --> time is set to the received time
-			sendbuffer[0] = answerbuffer[0];
-			sendbuffer[1] = answerbuffer[1];
-			sendbuffer[2] = answerbuffer[2];
-			sendbuffer[3] = answerbuffer[3];
-			sendbuffer[4] = answerbuffer[4];
-			sendbuffer[5] = answerbuffer[5];
+			sendbuffer[0] = frameBuffer[reply_id].data[0];
+			sendbuffer[1] = frameBuffer[reply_id].data[1];
+			sendbuffer[2] = frameBuffer[reply_id].data[2];
+			sendbuffer[3] = frameBuffer[reply_id].data[3];
+			sendbuffer[4] = frameBuffer[reply_id].data[4];
+			sendbuffer[5] = frameBuffer[reply_id].data[5];
 			
 			
 		}
@@ -1228,6 +1225,9 @@ void execute_server_CMDS(uint8_t reply_id){
 		sendbuffer[length++] = options.Pressure_norm >> 8;
 		sendbuffer[length++] = (uint8_t) options.Pressure_norm;
 		
+		sendbuffer[length++] = options.Ping_Intervall >> 8;
+		sendbuffer[length++] = (uint8_t) options.Ping_Intervall;
+		
 		sendbuffer[length++] = status_ms_bytes.byte_92; // status_byte_92 is always zero
 		
 		xbee_send_message(CMD_send_options_92,sendbuffer,length);
@@ -1305,7 +1305,20 @@ void execute_server_CMDS(uint8_t reply_id){
 		
 		break;
 		
+		case CMD_received_set_ping_Intervall_103:
+		;
+		uint8_t Val_outof_Bounds = 0;
 		
+		uint16_t buff_ping_Intervall  =            ((uint16_t) frameBuffer[reply_id].data[0] << 8) | frameBuffer[reply_id].data[1] ;
+		
+		CHECK_BOUNDS(buff_ping_Intervall,MIN_Ping_Intervall,MAX_Ping_Intervall,default_Ping_Intervall,Val_outof_Bounds);
+		if (!Val_outof_Bounds)
+		{
+			options.Ping_Intervall = buff_ping_Intervall;
+		}
+		sendbuffer[0] = 0;
+		xbee_send_message(CMD_received_set_ping_Intervall_103,sendbuffer,1);
+		break;
 
 
 
@@ -1351,7 +1364,8 @@ uint8_t ping_server(void)
 	
 	#endif
 	buffer[0]= status_ms_bytes.byte_95; // Ping Status Byte is always 0
-	if( 0xFF == xbee_send_request(CMD_send_Ping_95,buffer,1))
+	uint8_t reply_id = xbee_send_request(CMD_send_Ping_95,buffer,1);
+	if( 0xFF == reply_id)
 	{
 		LCD_paint_info_line("NoPong",0);
 		_delay_ms(500);
@@ -1366,12 +1380,12 @@ uint8_t ping_server(void)
 		{
 			struct tm newtime;
 			
-			newtime.tm_sec  = answerbuffer[0];
-			newtime.tm_min  = answerbuffer[1];
-			newtime.tm_hour = answerbuffer[2];
-			newtime.tm_mday = answerbuffer[3];
-			newtime.tm_mon  = answerbuffer[4];
-			newtime.tm_year = answerbuffer[5];
+			newtime.tm_sec  = frameBuffer[reply_id].data[0];
+			newtime.tm_min  = frameBuffer[reply_id].data[1];
+			newtime.tm_hour = frameBuffer[reply_id].data[2];
+			newtime.tm_mday = frameBuffer[reply_id].data[3];
+			newtime.tm_mon  = frameBuffer[reply_id].data[4];
+			newtime.tm_year = frameBuffer[reply_id].data[5];
 			
 			
 			DS3231M_set_time(&newtime);
@@ -1664,6 +1678,30 @@ void Set_Options(uint8_t *optBuffer){
 
 
 
+long readVcc() {
+	// Read 1.1V reference against AVcc
+	// set the reference to Vcc and the measurement to the internal 1.1V reference
+	#if defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
+	ADMUX = _BV(REFS0) | _BV(MUX4) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+	#elif defined (__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__)
+	ADMUX = _BV(MUX5) | _BV(MUX0) ;
+	#else
+	ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+	#endif
+	
+	_delay_ms(20); // Wait for Vref to settle
+	ADCSRA |= _BV(ADSC); // Start conversion
+	while ( ADCSRA & (1<<ADSC) ){} // measuring
+	
+	uint8_t low  = ADCL; // must read ADCL first - it then locks ADCH
+	uint8_t high = ADCH; // unlocks both
+	
+	long result = ((high<<8) | low);
+	
+	//result = 1125300L / result; // Calculate Vcc (in mV); 1125300 = 1.1*1023*1000
+	return result; // Vcc in millivolts
+}
+
 
 //=========================================================================
 // MAIN PROGRAM
@@ -1679,8 +1717,17 @@ int main(void)
 	//=========================================================================
 	uint8_t 	buffer[SINGLE_FRAME_LENGTH];
 
-
-
+	adc_init(0x0e);
+	LCD_Clear();
+	while (1)
+	{
+		double Vcc = readChannel( (_BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1)),20) ;
+		sprintf(print_temp,"%f V",Vcc);
+		LCD_String(print_temp,0,0);
+		_delay_ms(100);
+		LCD_Clear();
+		_delay_ms(50);
+	}
 
 	//=========================================================================
 	// Display connection is in progress
@@ -1914,7 +1961,7 @@ int main(void)
 					SET_ERROR(I2C_BUS_ERROR);;
 					SET_ERROR(TEMPPRESS_ERROR);;
 					
-			
+					
 					// Quick Bus recovery to recover from short disturbances, the Server was notified regardless
 					LCD_paint_info_line("clrI2C",1);
 					uint8_t i2cState = I2C_ClearBus();
@@ -2118,7 +2165,7 @@ int main(void)
 			//   PING
 			//==========================================================
 			// since pressure/temp is measured every 5s and ping is done every 60+2 seconds to ensure they dont get triggerd at the same Second
-			if (((count_t_elapsed % Reconnect_Interval) == 2) && ((count_t_elapsed - last.time_ping) > 5 ))
+			if (((count_t_elapsed % options.Ping_Intervall) == 2) && ((count_t_elapsed - last.time_ping) > 5 ))
 			{
 				last.time_ping = count_t_elapsed;
 				
@@ -2161,14 +2208,14 @@ int main(void)
 				execute_server_CMDS(reply_id_off);
 			}
 
-			#endif 
+			#endif
 			
 			//=============================================================================================================================================
 			//     RECONNECT
 			//========================================================
 			// try to Reconnect after every 60s (Reconnect_after_time)
 			//========================================================
-			if (count_t_elapsed % Reconnect_Interval == 2){
+			if (count_t_elapsed % options.Ping_Intervall == 2){
 				#ifdef USE_XBEE
 				
 				if (!xbee_reconnect())
