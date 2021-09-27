@@ -248,7 +248,7 @@ uint8_t numberMeasBuff = 0;	/**< @brief number of stored measurements   */
 
 
 uint8_t 	buffer[SINGLE_FRAME_LENGTH]; /**< @brief  Send and receive Buffer i.e. Option retreival or #ping_server() */
-uint8_t 	sendbuffer[SINGLE_FRAME_LENGTH]; /**< @brief Send only Buffer used for sending data to the server for which no reply is expected i.e. Measurement data #CMD_send_data_91*/
+uint8_t 	sendbuffer[SINGLE_FRAME_LENGTH]; /**< @brief Send only Buffer used for sending data to the server for which no reply is expected i.e. Measurement data #MEAS_MSG*/
 
 
 #ifdef USE_LAN
@@ -350,7 +350,7 @@ void Collect_Measurement_Data(void){
 	if (!CHECK_ERROR(NETWORK_ERROR) && (!connected.TWI || CHECK_ERROR(TIMER_ERROR)) ) //  only way to get the current time when the TWI bus is locked or the last timereading was invalid but Network must be up
 	{
 		buffer[0]= status_ms_bytes.byte_95; // Ping Status Byte is always 0
-		uint8_t reply_id = xbee_send_request(CMD_send_Ping_95,buffer,1);
+		uint8_t reply_id = xbee_send_request(PING_MSG,buffer,1);
 		
 		if( 0xFF == reply_id)
 		{
@@ -465,7 +465,7 @@ void store_measurement(void)
 	LCD_String(print_temp,0,2);
 	_delay_ms(2000);
 	*/
-	measBuffer[nextfreeMeasBuff].type  = CMD_send_data_91;
+	measBuffer[nextfreeMeasBuff].type  = MEAS_MSG;
 	//	measBuffer[nextfreeMeasBuff].data  = buffer;
 	
 	//	for(uint8_t i = 0; i<length;i++) measBuffer[nextfreeMeasBuff].data[i] = buffer[i];
@@ -1066,7 +1066,7 @@ void reset_display(void){
 /**
 * @brief Handles the login process with the server. First a login request is sent and then the server sends back the options for the gascounter. Which are firstwritten to @p buffer and then copied into the #frameBuffer.
 *
-* @param db_cmd_type alsways set to #CMD_send_registration_90
+* @param db_cmd_type alsways set to #LOGIN_MSG
 * @param buffer Pointer to the buffer that contains login data (answer from the server will be written in the same buffer)
 * @param dest_high high 32-bit of coordinator address
 * @param dest_low low  32-bit of coordinator address
@@ -1158,18 +1158,18 @@ void execute_server_CMDS(uint8_t reply_id){
 	switch (frameBuffer[reply_id].type)
 	{
 		//=================================================================
-		case CMD_received_set_options_96:// set received Options
-		Set_Options((uint8_t*)frameBuffer[reply_id].data);
+		case SET_OPTIONS_CMD:// set received Options
+		Set_Options((uint8_t*)frameBuffer[reply_id].data,SET_OPTIONS_CMD);
 		break;
 		
 		//=================================================================
-		case CMD_received_send_data_97: // Send Measurement Data immediately
+		case TRIGGER_MEAS_CMD: // Send Measurement Data immediately
 		Collect_Measurement_Data();
-		xbee_send_message(CMD_send_response_send_data_94,sendbuffer,MEASUREMENT_MESSAGE_LENGTH);
+		xbee_send_message(TRIGGER_MEAS_CMD,sendbuffer,MEASUREMENT_MESSAGE_LENGTH);
 		break;
 		
 		//=================================================================
-		case CMD_received_send_options_98 : ;// send current options to Server
+		case GET_OPTIONS_CMD : ;// send current options to Server
 		
 		
 		uint32_t offsetValue_holder = options.offsetValue/1000; //convert into 1L unit
@@ -1230,14 +1230,14 @@ void execute_server_CMDS(uint8_t reply_id){
 		
 		sendbuffer[length++] = status_ms_bytes.byte_92; // status_byte_92 is always zero
 		
-		xbee_send_message(CMD_send_options_92,sendbuffer,length);
+		xbee_send_message(GET_OPTIONS_CMD,sendbuffer,length);
 		break;
 		
-		case CMD_received_ILM_Ignore_99: // ILM broadcast Message received do nothing
+		case DEPRECATED_ILM_BROADCAST: // ILM broadcast Message received do nothing
 		
 		break;
 		
-		case CMD_received_Funtrace_toggle_101:
+		case SET_FUNTRACE_CMD:
 		if (frameBuffer[reply_id].data[0] == 0)
 		{
 			eeprom_Fun_Trace.Enable_eeprom_Fun_Trace = false;
@@ -1255,7 +1255,7 @@ void execute_server_CMDS(uint8_t reply_id){
 
 		
 
-		case CMD_received_send_Funtrace_102: ;
+		case GET_FUNTRACE_CMD: ;
 
 		uint8_t funtrace_raw_buff[256];
 		
@@ -1268,7 +1268,7 @@ void execute_server_CMDS(uint8_t reply_id){
 				sendbuffer[i] = 0;
 			}
 			
-			xbee_send_message(CMD_send_funtrace_88,sendbuffer,FUNTRACE_ARRAY_SIZE+6);
+			xbee_send_message(GET_FUNTRACE_CMD,sendbuffer,FUNTRACE_ARRAY_SIZE+6);
 			break;
 		}
 		
@@ -1299,13 +1299,13 @@ void execute_server_CMDS(uint8_t reply_id){
 		}
 		
 
-		xbee_send_message(CMD_send_funtrace_88,sendbuffer,FUNTRACE_ARRAY_SIZE+6);
+		xbee_send_message(GET_FUNTRACE_CMD,sendbuffer,FUNTRACE_ARRAY_SIZE+6);
 
 		
 		
 		break;
 		
-		case CMD_received_set_ping_Intervall_103:
+		case SET_PING_INTERVALL_CMD:
 		;
 		uint8_t Val_outof_Bounds = 0;
 		
@@ -1317,13 +1317,13 @@ void execute_server_CMDS(uint8_t reply_id){
 			options.Ping_Intervall = buff_ping_Intervall;
 		}
 		sendbuffer[0] = 0;
-		xbee_send_message(CMD_received_set_ping_Intervall_103,sendbuffer,1);
+		xbee_send_message(SET_PING_INTERVALL_CMD,sendbuffer,1);
 		break;
 
 
 
 		#ifdef USE_LAN
-		case CMD_received_simulate_xBee_100:
+		case SIMULATE_XBEE_CMD:
 		
 		if (ex_mode == offline)
 		{
@@ -1364,7 +1364,7 @@ uint8_t ping_server(void)
 	
 	#endif
 	buffer[0]= status_ms_bytes.byte_95; // Ping Status Byte is always 0
-	uint8_t reply_id = xbee_send_request(CMD_send_Ping_95,buffer,1);
+	uint8_t reply_id = xbee_send_request(PING_MSG,buffer,1);
 	if( 0xFF == reply_id)
 	{
 		LCD_paint_info_line("NoPong",0);
@@ -1452,7 +1452,7 @@ uint8_t analyze_Connection(void)
 
 
 /**
-* @brief Receives new options in #buffer and validates them. The validity of the options is reported back to the Server via a #CMD_send_response_options_set_93 Message containing the status#byte_93.
+* @brief Receives new options in #buffer and validates them. The validity of the options is reported back to the Server via a #OPTIONS_SET_ACK Message containing the status#byte_93.
 *
 * @param optBuffer Byte-Array containing the raw options received from the server
 * @param dest_high high 32-bit of coordinator address
@@ -1460,7 +1460,7 @@ uint8_t analyze_Connection(void)
 *
 * @return void
 */
-void Set_Options(uint8_t *optBuffer){
+void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	FUNCTION_TRACE
 	
 	Funtrace_enter(10);
@@ -1596,7 +1596,7 @@ void Set_Options(uint8_t *optBuffer){
 	{
 		BIT_SET(sendbuffer[0],status_bit_success_setting_options_93);  // not successfully accepted
 		SET_ERROR(OPTIONS_ERROR);
-		xbee_send_message(CMD_send_response_options_set_93,sendbuffer,1);
+		xbee_send_message(answer_code,sendbuffer,1);
 
 		return ;
 	}
@@ -1664,7 +1664,7 @@ void Set_Options(uint8_t *optBuffer){
 	// Options successfully set
 	sendbuffer[0] = 0;
 	CLEAR_ERROR(OPTIONS_ERROR);;
-	xbee_send_message(CMD_send_response_options_set_93,sendbuffer,1);
+	xbee_send_message(answer_code,sendbuffer,1);
 	LCD_paint_info_line(" Op93 ",0);
 	_delay_ms(2000);
 
@@ -1741,10 +1741,10 @@ int main(void)
 	//=========================================================================
 	#ifdef USE_LAN
 
-	uint8_t reply_id = xbee_send_login_msg(CMD_send_registration_90, buffer);
+	uint8_t reply_id = xbee_send_login_msg(LOGIN_MSG, buffer);
 	
 	if (reply_id!= 0xFF ){ // GOOD OPTIONS RECEIVED
-		Set_Options(frameBuffer[reply_id].data);
+		Set_Options(frameBuffer[reply_id].data,OPTIONS_SET_ACK);
 	}
 	else // DEFECTIVE OPTIONS RECEIVED OR NO NETWORK
 	{
@@ -1780,10 +1780,10 @@ int main(void)
 				// Device Login
 				//=========================================================================
 
-				uint8_t reply_id = xbee_send_login_msg(CMD_send_registration_90, buffer);
+				uint8_t reply_id = xbee_send_login_msg(LOGIN_MSG, buffer);
 				
 				if (reply_id!= 0xFF ){ // GOOD OPTIONS RECEIVED
-					Set_Options((uint8_t*)frameBuffer[reply_id].data);
+					Set_Options((uint8_t*)frameBuffer[reply_id].data,OPTIONS_SET_ACK);
 				}
 				else // DEFECTIVE OPTIONS RECEIVED
 				{
@@ -1875,7 +1875,7 @@ int main(void)
 		else
 		{
 			// send Measurement Data to Server
-			if( 0xFF ==xbee_send_request(CMD_send_data_91,sendbuffer,MEASUREMENT_MESSAGE_LENGTH))
+			if( 0xFF ==xbee_send_request(MEAS_MSG,sendbuffer,MEASUREMENT_MESSAGE_LENGTH))
 			{
 				LCD_paint_info_line("No Ack",0);
 				_delay_ms(500);
@@ -2045,7 +2045,7 @@ int main(void)
 			else
 			{
 				// send Measurement Data to Server
-				if( 0xFF ==xbee_send_request(CMD_send_data_91,sendbuffer,MEASUREMENT_MESSAGE_LENGTH))
+				if( 0xFF ==xbee_send_request(MEAS_MSG,sendbuffer,MEASUREMENT_MESSAGE_LENGTH))
 				{
 					LCD_paint_info_line("No Ack",0);
 					_delay_ms(500);
@@ -2271,7 +2271,7 @@ int main(void)
 								sprintf(print_temp,"%03d",numberMeasBuff);
 								LCD_String(print_temp,0,3);
 								memcpy(sendbuffer,measBuffer[firstMeasBuff].data,MEASUREMENT_MESSAGE_LENGTH);
-								if( xbee_send_request(CMD_send_data_91,sendbuffer, MEASUREMENT_MESSAGE_LENGTH) == 0xFF  )
+								if( xbee_send_request(MEAS_MSG,sendbuffer, MEASUREMENT_MESSAGE_LENGTH) == 0xFF  )
 								{//=========================
 									LCD_paint_info_line("No Ack",0);
 									_delay_ms(500);

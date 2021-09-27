@@ -233,12 +233,12 @@ enum PARENT_MODE
 */
 typedef struct
 {
-	uint8_t byte_90; /**< @brief  sent on registration with Server (#CMD_send_registration_90)*/
-	//uint8_t byte_91; /**< @brief  sent on Measurement Data Transmission  (#CMD_send_data_91). communicates Device Status to server.*/
-	uint8_t byte_92; /**< @brief  sent in response to send options Command (#CMD_send_options_92). Is currently always set to zero.   */
-	//uint8_t byte_93; /**< @brief  sent in response to receiving options (#CMD_send_response_options_set_93). The 0th Bit set to one indicates an error with setting Options */
+	uint8_t byte_90; /**< @brief  sent on registration with Server (#LOGIN_MSG)*/
+	//uint8_t byte_91; /**< @brief  sent on Measurement Data Transmission  (#MEAS_MSG). communicates Device Status to server.*/
+	uint8_t byte_92; /**< @brief  sent in response to send options Command (#GET_OPTIONS_CMD). Is currently always set to zero.   */
+	//uint8_t byte_93; /**< @brief  sent in response to receiving options (#OPTIONS_SET_ACK). The 0th Bit set to one indicates an error with setting Options */
 	//uint8_t byte_94;    always equals byte_91
-	uint8_t byte_95; /**< @brief sent with every Ping (#CMD_send_Ping_95). Currently always set to zero. */
+	uint8_t byte_95; /**< @brief sent with every Ping (#PING_MSG). Currently always set to zero. */
 	uint8_t byte_96; /**< @brief  received with Options from the Server. Indicates wether Volume-offsets should be kept or updated */
 }statusType;
 
@@ -337,7 +337,7 @@ void Funtrace_enter(uint8_t Function_ID);
 uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer);
 void execute_server_CMDS(uint8_t reply_id);
 uint8_t ping_server(void);
-void Set_Options(uint8_t *optBuffer);
+void Set_Options(uint8_t *optBuffer,uint8_t answer_code);
 uint8_t analyze_Connection(void);
 
 #endif  // Gascounter_main.h
