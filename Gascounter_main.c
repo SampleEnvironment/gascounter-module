@@ -1225,8 +1225,8 @@ void execute_server_CMDS(uint8_t reply_id){
 		sendbuffer[length++] = options.Pressure_norm >> 8;
 		sendbuffer[length++] = (uint8_t) options.Pressure_norm;
 		
-		sendbuffer[length++] = options.Ping_Intervall >> 8;
-		sendbuffer[length++] = (uint8_t) options.Ping_Intervall;
+		sendbuffer[length++] = options.Ping_Intervall;
+
 		
 		sendbuffer[length++] = status_ms_bytes.byte_92; // status_byte_92 is always zero
 		
@@ -1309,7 +1309,7 @@ void execute_server_CMDS(uint8_t reply_id){
 		;
 		uint8_t Val_outof_Bounds = 0;
 		
-		uint16_t buff_ping_Intervall  =            ((uint16_t) frameBuffer[reply_id].data[0] << 8) | frameBuffer[reply_id].data[1] ;
+		uint16_t buff_ping_Intervall  =          frameBuffer[reply_id].data[0]  ;
 		
 		CHECK_BOUNDS(buff_ping_Intervall,MIN_Ping_Intervall,MAX_Ping_Intervall,default_Ping_Intervall,Val_outof_Bounds);
 		if (!Val_outof_Bounds)
@@ -1717,6 +1717,7 @@ int main(void)
 	//=========================================================================
 	uint8_t 	buffer[SINGLE_FRAME_LENGTH];
 
+/*
 	adc_init(0x0e);
 	LCD_Clear();
 	while (1)
@@ -1728,7 +1729,7 @@ int main(void)
 		LCD_Clear();
 		_delay_ms(50);
 	}
-
+*/
 	//=========================================================================
 	// Display connection is in progress
 	//=========================================================================
@@ -2165,7 +2166,7 @@ int main(void)
 			//   PING
 			//==========================================================
 			// since pressure/temp is measured every 5s and ping is done every 60+2 seconds to ensure they dont get triggerd at the same Second
-			if (((count_t_elapsed % options.Ping_Intervall) == 2) && ((count_t_elapsed - last.time_ping) > 5 ))
+			if (((count_t_elapsed % (options.Ping_Intervall*60)) == 2) && ((count_t_elapsed - last.time_ping) > 5 ))
 			{
 				last.time_ping = count_t_elapsed;
 				
@@ -2215,7 +2216,7 @@ int main(void)
 			//========================================================
 			// try to Reconnect after every 60s (Reconnect_after_time)
 			//========================================================
-			if (count_t_elapsed % options.Ping_Intervall == 2){
+			if (count_t_elapsed % (options.Ping_Intervall*60) == 2){
 				#ifdef USE_XBEE
 				
 				if (!xbee_reconnect())

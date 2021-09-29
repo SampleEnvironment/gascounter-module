@@ -20,7 +20,7 @@
 
 #define FIRMWARE_VERSION  208 /**< @brief  Software Version  */
 
-#define BRANCH_ID 1 
+#define BRANCH_ID 2 
 
 
 //=========================================================================
@@ -72,9 +72,9 @@
 #define default_Temperature_norm				2882	// in 0.1K //15.0 C as default reference
 #define default_Pressure_norm					10133	// in 0.1 mBar
 
-#define default_Ping_Intervall 60*10
-#define MIN_Ping_Intervall 60
-#define MAX_Ping_Intervall 60*120
+#define default_Ping_Intervall 10
+#define MIN_Ping_Intervall 1
+#define MAX_Ping_Intervall 255
 
 
 #define MAX_NOMINAL_PRESSURE			117000 // 1170.00 mbar
@@ -149,7 +149,7 @@ typedef struct{
 	uint16_t Temperature_norm;      /**< @brief Normal Temperature usually 15C (in 0.1K) */
 	uint8_t p_Compensation_enable;  /**< @brief Pressure-Compensation Boolean 1 = ON; 0 = OFF */
 	uint16_t Pressure_norm;			/**< @brief Normal Pressure usually 1033.3mbar (in 0.1mbar) */
-	uint16_t Ping_Intervall;		/**< @brief Time between Pings to the Server (in seconds) */
+	uint8_t Ping_Intervall;		/**< @brief Time between Pings to the Server (in seconds) */
 }optType;
 
 
