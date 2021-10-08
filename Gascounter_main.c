@@ -347,57 +347,6 @@ void Collect_Measurement_Data(void){
 		sendbuffer[5] = Time.tm_year;
 	}
 	
-	if (!CHECK_ERROR(NETWORK_ERROR) && (!connected.TWI || CHECK_ERROR(TIMER_ERROR)) ) //  only way to get the current time when the TWI bus is locked or the last timereading was invalid but Network must be up
-	{
-		buffer[0]= status_ms_bytes.byte_95; // Ping Status Byte is always 0
-		uint8_t reply_id = xbee_send_request(PING_MSG,buffer,1);
-		
-		if( 0xFF == reply_id)
-		{
-			LCD_paint_info_line("NoPong",0);
-			_delay_ms(500);
-			SET_ERROR(NETWORK_ERROR);
-			ex_mode = offline;
-			analyze_Connection();
-			
-		}
-		else
-		{
-			
-			sendbuffer[0] = frameBuffer[reply_id].data[0];
-			sendbuffer[1] = frameBuffer[reply_id].data[1];
-			sendbuffer[2] = frameBuffer[reply_id].data[2];
-			sendbuffer[3] = frameBuffer[reply_id].data[3];
-			sendbuffer[4] = frameBuffer[reply_id].data[4];
-			sendbuffer[5] = frameBuffer[reply_id].data[5];
-			
-			
-		}
-	}
-	
-	if (CHECK_ERROR(NETWORK_ERROR) && (!connected.TWI || CHECK_ERROR(TIMER_ERROR)))
-	{
-		
-		
-		
-		
-		uint32_t diff_t = count_t_elapsed - last.time_valid_time_reading;
-		time_t Time_Estimate = last_Valid_Time + diff_t;
-		
-		gmtime_r(&Time_Estimate,&Time);
-		Time.tm_year -= 100;
-		
-		Time.tm_mon += 1; // time.h mon range only goes from 0..11
-		
-		sendbuffer[0] = Time.tm_sec;
-		sendbuffer[1] = Time.tm_min;
-		sendbuffer[2] = Time.tm_hour;
-		sendbuffer[3] = Time.tm_mday;
-		sendbuffer[4] = Time.tm_mon;
-		sendbuffer[5] = Time.tm_year;
-		
-	}
-
 	
 	sendbuffer[6] = Value_holder >> 24;
 	sendbuffer[7] = Value_holder >> 16;
@@ -1521,10 +1470,13 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 		.T_Compensation_enable =  optBuffer[32],
 		.Temperature_norm =      ((uint16_t) optBuffer[33] << 8) | optBuffer[34] ,
 		.p_Compensation_enable =  optBuffer[35] ,
-	.Pressure_norm =         ((uint16_t) optBuffer[36] << 8) | optBuffer[37] };
+		.Pressure_norm =         ((uint16_t) optBuffer[36] << 8) | optBuffer[37],
+		.Ping_Intervall = optBuffer[38]
+	};
+	
 
 	
-	status_ms_bytes.byte_96 = optBuffer[38];
+	status_ms_bytes.byte_96 = optBuffer[39];
 	
 	
 
@@ -1564,6 +1516,8 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	optholder.T_Compensation_enable = 1;
 	optholder.p_Compensation_enable = 1;
 	#endif
+	
+
 	
 	#ifdef DEBUG_OPTIONS
 	LCD_InitScreen_AddLine("Options",1);
@@ -1717,19 +1671,19 @@ int main(void)
 	//=========================================================================
 	uint8_t 	buffer[SINGLE_FRAME_LENGTH];
 
-/*
+	/*
 	adc_init(0x0e);
 	LCD_Clear();
 	while (1)
 	{
-		double Vcc = readChannel( (_BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1)),20) ;
-		sprintf(print_temp,"%f V",Vcc);
-		LCD_String(print_temp,0,0);
-		_delay_ms(100);
-		LCD_Clear();
-		_delay_ms(50);
+	double Vcc = readChannel( (_BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1)),20) ;
+	sprintf(print_temp,"%f V",Vcc);
+	LCD_String(print_temp,0,0);
+	_delay_ms(100);
+	LCD_Clear();
+	_delay_ms(50);
 	}
-*/
+	*/
 	//=========================================================================
 	// Display connection is in progress
 	//=========================================================================
