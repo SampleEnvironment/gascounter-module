@@ -74,8 +74,8 @@
 //MAX
 
 
-#define DEF_t_transmission_min				5		// in seconds
-#define MIN_t_transmission_min				5		// in seconds
+#define DEF_t_transmission_min				10		// in seconds
+#define MIN_t_transmission_min				1		// in seconds
 #define MAX_t_transmission_min				5		// in seconds
 
 #define DEF_t_transmission_max				120		// in minutes
@@ -100,8 +100,8 @@
 #define DEF_p_Compensation_enable			0		// 1...ON	0...Off
 
 #define DEF_Temperature_norm				2882	// in 0.1K //15.0 C as default reference
-#define MIN_Temperature_norm				2882	// in 0.1K //15.0 C as default reference
-#define MAX_Temperature_norm				2882	// in 0.1K //15.0 C as default reference
+#define MIN_Temperature_norm				2500	// in 0.1K //15.0 C as default reference
+#define MAX_Temperature_norm				3200	// in 0.1K //15.0 C as default reference
 
 #define DEF_Pressure_norm					10133	// in 0.1 mBar
 #define MIN_Pressure_norm					 8000	// in 0.1 mBar
@@ -178,7 +178,7 @@ typedef struct{
 	uint32_t delta_V;				/**< @brief Delta Volume since last Measurement-Data Transmission (in 1ml) */
 	uint16_t delta_p;				/**< @brief Delta Pressure since last Measurement-Data Transmission (in 0.1mbar) */
 	uint32_t step_Volume;			/**< @brief Volume-Step that corresponds to one Tick from the Gascounter. Specific for the kind of Gascounter that is used. (in 1ml) */
-	//int16_t offset_pressure;		/**< @brief Offset Pressure for Altitude compensation (in 0.1mbar) */
+	//int16_t offset_pressure;		/**< @brief Offset Pressure for Altitude compensation (in 0.1mbar) */  //TODO Remove
 	//uint16_t span_pressure;			/**< @brief Span Pressure ?? in 10^-4 */
 	uint8_t T_Compensation_enable;  /**< @brief Temperature-Compensation Boolean 1 = ON; 0 = OFF */
 	uint16_t Temperature_norm;      /**< @brief Normal Temperature usually 15C (in 0.1K) */

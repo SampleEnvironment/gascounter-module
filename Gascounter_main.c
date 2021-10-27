@@ -1410,6 +1410,8 @@ uint8_t analyze_Connection(void)
 void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	FUNCTION_TRACE
 	
+	uint8_t outofBundsFlag;
+	
 	Funtrace_enter(10);
 	_delay_ms(200);
 
@@ -1452,17 +1454,17 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	
 	
 	optType optholder = {
-		.offsetValue =			 ((uint64_t) optBuffer[6] << 24) | ((uint64_t) optBuffer[7] << 16) | ((uint64_t) optBuffer[8] << 8) | optBuffer[9] ,
-		.offsetVolume =          ((uint64_t) optBuffer[10] << 24) | ((uint64_t) optBuffer[11] << 16) | ((uint64_t) optBuffer[12] << 8) | optBuffer[13] ,
-		.offsetCorrVolume =	     ((uint64_t) optBuffer[14] << 24) | ((uint64_t) optBuffer[15] << 16) | ((uint64_t) optBuffer[16] << 8) | optBuffer[17] ,
+		.offsetValue =			 (((uint64_t) optBuffer[6] << 24) | ((uint64_t) optBuffer[7] << 16) | ((uint64_t) optBuffer[8] << 8) | optBuffer[9])* 1000 ,
+		.offsetVolume =          (((uint64_t) optBuffer[10] << 24) | ((uint64_t) optBuffer[11] << 16) | ((uint64_t) optBuffer[12] << 8) | optBuffer[13])* 1000 ,
+		.offsetCorrVolume =	     (((uint64_t) optBuffer[14] << 24) | ((uint64_t) optBuffer[15] << 16) | ((uint64_t) optBuffer[16] << 8) | optBuffer[17])* 1000 ,
 		.Value =  0 ,
 		.Volume = 0 ,
 		.CorrVolume = 0 ,
 		.t_transmission_min =    ((uint16_t) optBuffer[18] << 8) | optBuffer[19] ,
 		.t_transmission_max =    ((uint16_t) optBuffer[20] << 8) | optBuffer[21] ,
-		.delta_V =				 ((uint32_t) optBuffer[22] << 8) | optBuffer[23] ,
+		.delta_V =				 (((uint32_t) optBuffer[22] << 8) | optBuffer[23])* 1000 ,
 		.delta_p =				 ((uint16_t) optBuffer[24] << 8) | optBuffer[25],
-		.step_Volume =			 ((uint32_t) optBuffer[26] << 8) | optBuffer[27] ,
+		.step_Volume =			 (((uint32_t) optBuffer[26] << 8) | optBuffer[27])* 1000 ,
 		//.offset_pressure =		 ((int16_t) optBuffer[28] << 8) | optBuffer[29], // the value is transmitted with +32768 because no negative numbers can be transmitted
 		//.span_pressure =		 ((uint16_t) optBuffer[30] << 8) | optBuffer[31],
 		.T_Compensation_enable =  optBuffer[32], //TODO Decrease bytenum by 4...
@@ -1544,8 +1546,26 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 		return ;
 	}
 	
-	
-	
+	//checking bounds
+	CHECK_BOUNDS(optholder.t_transmission_max,MIN_t_transmission_max,MAX_t_transmission_max,DEF_t_transmission_max,outofBundsFlag);
+	CHECK_BOUNDS(optholder.t_transmission_min,MIN_t_transmission_min,MAX_t_transmission_min,DEF_t_transmission_min,outofBundsFlag);
+	CHECK_BOUNDS(optholder.delta_V,MIN_delta_V,MAX_delta_V,DEF_delta_V,outofBundsFlag);
+	CHECK_BOUNDS(optholder.delta_p,MIN_delta_p,MAX_delta_p,DEF_delta_p,outofBundsFlag);
+	CHECK_BOUNDS(optholder.step_Volume,MIN_step_Volume,MAX_step_Volume,DEF_step_Volume,outofBundsFlag);
+	CHECK_BOUNDS(optholder.Temperature_norm,MIN_Temperature_norm,MAX_Temperature_norm,DEF_Temperature_norm,outofBundsFlag);
+	CHECK_BOUNDS(optholder.Pressure_norm,MIN_Pressure_norm,MAX_Pressure_norm,DEF_Pressure_norm,outofBundsFlag);
+	CHECK_BOUNDS(optholder.Ping_Intervall,MIN_Ping_Intervall,MAX_Ping_Intervall,DEF_Ping_Intervall,outofBundsFlag);
+
+	if (outofBundsFlag)
+	{
+		BIT_SET(sendbuffer[0],status_bit_success_setting_options_93);  // not successfully accepted
+		SET_ERROR(OPTIONS_ERROR);
+		xbee_send_message(answer_code,sendbuffer,1);
+
+		return ;
+	}
+
+
 	if (optholder.delta_V < optholder.step_Volume)
 	{
 		optholder.delta_V = optholder.step_Volume;
@@ -1553,9 +1573,9 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	
 	if (BIT_CHECK(status_ms_bytes.byte_96,status_bit_set_offsets_96))
 	{
-		options.offsetValue =  optholder.offsetValue * 1000;
-		options.offsetVolume = optholder.offsetVolume * 1000;
-		options.offsetCorrVolume = optholder.offsetCorrVolume * 1000;
+		options.offsetValue =  optholder.offsetValue ;
+		options.offsetVolume = optholder.offsetVolume ;
+		options.offsetCorrVolume = optholder.offsetCorrVolume;
 		
 		options.Value = options.offsetValue;
 		options.Volume = options.offsetVolume;
@@ -1563,9 +1583,9 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	}
 	options.t_transmission_min = optholder.t_transmission_min;
 	options.t_transmission_max = optholder.t_transmission_max;
-	options.delta_V =  optholder.delta_V * 1000;
+	options.delta_V =  optholder.delta_V;
 	options.delta_p = optholder.delta_p;
-	options.step_Volume = optholder.step_Volume * 1000;
+	options.step_Volume = optholder.step_Volume;
 	options.T_Compensation_enable = optholder.T_Compensation_enable;
 	options.Temperature_norm = optholder.Temperature_norm;
 	options.p_Compensation_enable = optholder.p_Compensation_enable;
