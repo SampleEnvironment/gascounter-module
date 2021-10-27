@@ -20,7 +20,7 @@
 
 #define FIRMWARE_VERSION  208 /**< @brief  Software Version  */
 
-#define BRANCH_ID 2 
+#define BRANCH_ID 2
 
 
 //=========================================================================
@@ -54,27 +54,62 @@
 //#define force_tp_comp
 
 
-#define default_offsetValue						0		// in 1 mL
-#define default_offsetVolume					0		// in 1 mL
-#define default_offsetCorrVolume				0		// in 1 mL
-#define default_Value							0		// in 1 mL
-#define default_Volume							0		// in 1 mL
-#define default_CorrVolume						0		// in 1 mL
-#define default_t_transmission_min				5		// in seconds
-#define default_t_transmission_max				120		// in minutes
-#define default_delta_V							100000	// in 1 mL
-#define default_delta_p							100		// in 0.1 mbar
-#define default_step_Volume						10000	// in 1 mL // normally 10L
-#define default_offset_pressure					0		// in 0.1 mbar
-#define default_span_pressure					10000	// in 10^-4
-#define default_T_Compensation_enable			0		// 1...ON	0...Off
-#define default_p_Compensation_enable			0		// 1...ON	0...Off
-#define default_Temperature_norm				2882	// in 0.1K //15.0 C as default reference
-#define default_Pressure_norm					10133	// in 0.1 mBar
+#define DEF_offsetValue						0		// in 1 mL
+//MIN
+//MAX
+#define DEF_offsetVolume					0		// in 1 mL
+//MIN
+//MAX
+#define DEF_offsetCorrVolume				0		// in 1 mL
+//MIN
+//MAX
+#define DEF_Value							0		// in 1 mL
+//MIN
+//MAX
+#define DEF_Volume							0		// in 1 mL
+//MIN
+//MAX
+#define DEF_CorrVolume						0		// in 1 mL
+//MIN
+//MAX
 
-#define default_Ping_Intervall 10
-#define MIN_Ping_Intervall 1
-#define MAX_Ping_Intervall 255
+
+#define DEF_t_transmission_min				5		// in seconds
+#define MIN_t_transmission_min				5		// in seconds
+#define MAX_t_transmission_min				5		// in seconds
+
+#define DEF_t_transmission_max				120		// in minutes
+#define MIN_t_transmission_max				1		// in minutes
+#define MAX_t_transmission_max				1000	// in minutes
+
+#define DEF_delta_V					      100000	// in 1 mL
+#define MIN_delta_V						   	1000	// in 1 mL
+#define MAX_delta_V					    65000000	// in 1 mL
+
+#define DEF_delta_p							100		// in 0.1 mbar
+#define MIN_delta_p						      1  	// in 0.1 mbar
+#define MAX_delta_p						   5000		// in 0.1 mbar
+
+#define DEF_step_Volume						10000	// in 1 mL // normally 10L
+#define MIN_step_Volume						 1000 	// in 1 mL // normally 10L
+#define MAX_step_Volume				    65000000	// in 1 mL // normally 10L
+
+
+
+#define DEF_T_Compensation_enable			0		// 1...ON	0...Off
+#define DEF_p_Compensation_enable			0		// 1...ON	0...Off
+
+#define DEF_Temperature_norm				2882	// in 0.1K //15.0 C as default reference
+#define MIN_Temperature_norm				2882	// in 0.1K //15.0 C as default reference
+#define MAX_Temperature_norm				2882	// in 0.1K //15.0 C as default reference
+
+#define DEF_Pressure_norm					10133	// in 0.1 mBar
+#define MIN_Pressure_norm					 8000	// in 0.1 mBar
+#define MAX_Pressure_norm					13000	// in 0.1 mBar
+
+#define DEF_Ping_Intervall					   10   // in Minutes
+#define MIN_Ping_Intervall						1   // in Minutes
+#define MAX_Ping_Intervall					  255	// in Minutes
 
 
 #define MAX_NOMINAL_PRESSURE			117000 // 1170.00 mbar
@@ -82,7 +117,7 @@
 #define MAX_NOMINAL_TEMPERATURE			  3280  // 55°C
 #define MIN_NOMINAL_TEMPERATURE			  2631  //-10°C
 
-#define MAX_PRESSURE_DELTA			   12000 //  120mbar/5s		
+#define MAX_PRESSURE_DELTA			   12000 //  120mbar/5s
 #define MAX_TEMPERATURE_DELTA			 130 //  13°C/5s
 
 #define FUNTRACE_ARRAY_SIZE			10
@@ -112,7 +147,7 @@ typedef struct {
 *
 * Absolute Times/Pressure of the last time an action was executetd i.e: Pinging the Server
 */
-typedef struct {  
+typedef struct {
 	uint32_t Pressure_on_send;         /**< @brief Pressure the last time Data was sent/stored to the Server/memory (in 0.1 mbar)*/
 	uint32_t time_send;				   /**< @brief Absolute time of last sending of Data*/
 	uint32_t time_display_reset;       /**< @brief Absolute time of last Display Reset*/
@@ -143,13 +178,13 @@ typedef struct{
 	uint32_t delta_V;				/**< @brief Delta Volume since last Measurement-Data Transmission (in 1ml) */
 	uint16_t delta_p;				/**< @brief Delta Pressure since last Measurement-Data Transmission (in 0.1mbar) */
 	uint32_t step_Volume;			/**< @brief Volume-Step that corresponds to one Tick from the Gascounter. Specific for the kind of Gascounter that is used. (in 1ml) */
-	int16_t offset_pressure;		/**< @brief Offset Pressure for Altitude compensation (in 0.1mbar) */
-	uint16_t span_pressure;			/**< @brief Span Pressure ?? in 10^-4 */
+	//int16_t offset_pressure;		/**< @brief Offset Pressure for Altitude compensation (in 0.1mbar) */
+	//uint16_t span_pressure;			/**< @brief Span Pressure ?? in 10^-4 */
 	uint8_t T_Compensation_enable;  /**< @brief Temperature-Compensation Boolean 1 = ON; 0 = OFF */
 	uint16_t Temperature_norm;      /**< @brief Normal Temperature usually 15C (in 0.1K) */
 	uint8_t p_Compensation_enable;  /**< @brief Pressure-Compensation Boolean 1 = ON; 0 = OFF */
 	uint16_t Pressure_norm;			/**< @brief Normal Pressure usually 1033.3mbar (in 0.1mbar) */
-	uint8_t Ping_Intervall;		/**< @brief Time between Pings to the Server (in seconds) */
+	uint8_t Ping_Intervall;		/**< @brief Time between Pings to the Server (in minutes) */
 }optType;
 
 

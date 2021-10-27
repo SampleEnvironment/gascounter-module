@@ -105,24 +105,22 @@ lastType last= {.Pressure_on_send = 0,.time_send = 0,.time_display_reset = 0,.ti
 *
 * Active Options that are Set in the Gascounter
 */
-optType options = {.offsetValue = default_offsetValue,
-	.offsetVolume = default_offsetVolume,
-	.offsetCorrVolume = default_offsetCorrVolume,
-	.Value = default_Value,
-	.Volume = default_Volume,
-	.CorrVolume = default_CorrVolume,
-	.t_transmission_min = default_t_transmission_min,
-	.t_transmission_max = default_t_transmission_max,
-	.delta_V = default_delta_V,
-	.delta_p = default_delta_p,
-	.step_Volume = default_step_Volume,
-	.offset_pressure = default_offset_pressure,
-	.span_pressure = default_span_pressure,
-	.T_Compensation_enable = default_T_Compensation_enable,
-	.Temperature_norm = default_Temperature_norm,
-	.p_Compensation_enable = default_p_Compensation_enable,
-	.Pressure_norm = default_Pressure_norm,
-	.Ping_Intervall = default_Ping_Intervall
+optType options = {.offsetValue = DEF_offsetValue,
+	.offsetVolume = DEF_offsetVolume,
+	.offsetCorrVolume = DEF_offsetCorrVolume,
+	.Value = DEF_Value,
+	.Volume = DEF_Volume,
+	.CorrVolume = DEF_CorrVolume,
+	.t_transmission_min = DEF_t_transmission_min,
+	.t_transmission_max = DEF_t_transmission_max,
+	.delta_V = DEF_delta_V,
+	.delta_p = DEF_delta_p,
+	.step_Volume = DEF_step_Volume,
+	.T_Compensation_enable = DEF_T_Compensation_enable,
+	.Temperature_norm = DEF_Temperature_norm,
+	.p_Compensation_enable = DEF_p_Compensation_enable,
+	.Pressure_norm = DEF_Pressure_norm,
+	.Ping_Intervall = DEF_Ping_Intervall
 };
 
 /************************************************************************/
@@ -205,7 +203,7 @@ uint32_t BMP_Temperature_old = 0;
 *
 * Holds the old options#Value, options#Volume and options#CorrVolume Measurement in order to compare them with the new one  to check for overflows
 */
-oldType old = {.Value = default_Value, .Volume = default_Volume, .CorrVolume=default_CorrVolume};
+oldType old = {.Value = DEF_Value, .Volume = DEF_Volume, .CorrVolume=DEF_CorrVolume};
 
 
 char print_temp[15] = "";/**< @brief   Char Array for displaying Strings*/
@@ -795,7 +793,7 @@ void Temp_Press_CorrectedVolume(void)
 	if(!CHECK_ERROR(TEMPPRESS_ERROR) && connected.TWI){ // only updated when BMP is connected
 		
 		Temperature_value = BMP_Temperature;
-		Pressure_value = (options.span_pressure * BMP_Pressure)/100000 + options.offset_pressure; // conversion from Pa to mbar
+		Pressure_value =  BMP_Pressure/100000; // conversion from Pa to mbar
 		
 	}
 	uint32_t Ticks_since_last_TP_Meas;
@@ -1158,11 +1156,11 @@ void execute_server_CMDS(uint8_t reply_id){
 		sendbuffer[length++] = step_Volume_holder >> 8;
 		sendbuffer[length++] = (uint8_t) step_Volume_holder;
 		
-		sendbuffer[length++] = options.offset_pressure >> 8;
-		sendbuffer[length++] = (uint8_t) options.offset_pressure;
+		sendbuffer[length++] = 0;//TODO remove
+		sendbuffer[length++] = 0;
 		
-		sendbuffer[length++] = options.span_pressure >> 8;
-		sendbuffer[length++] = (uint8_t) options.span_pressure;
+		sendbuffer[length++] = 0;//TODO Remove
+		sendbuffer[length++] = 0;
 		
 		sendbuffer[length++] = options.T_Compensation_enable;
 		
@@ -1260,7 +1258,7 @@ void execute_server_CMDS(uint8_t reply_id){
 		
 		uint16_t buff_ping_Intervall  =          frameBuffer[reply_id].data[0]  ;
 		
-		CHECK_BOUNDS(buff_ping_Intervall,MIN_Ping_Intervall,MAX_Ping_Intervall,default_Ping_Intervall,Val_outof_Bounds);
+		CHECK_BOUNDS(buff_ping_Intervall,MIN_Ping_Intervall,MAX_Ping_Intervall,DEF_Ping_Intervall,Val_outof_Bounds);
 		if (!Val_outof_Bounds)
 		{
 			options.Ping_Intervall = buff_ping_Intervall;
@@ -1465,9 +1463,9 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 		.delta_V =				 ((uint32_t) optBuffer[22] << 8) | optBuffer[23] ,
 		.delta_p =				 ((uint16_t) optBuffer[24] << 8) | optBuffer[25],
 		.step_Volume =			 ((uint32_t) optBuffer[26] << 8) | optBuffer[27] ,
-		.offset_pressure =		 ((int16_t) optBuffer[28] << 8) | optBuffer[29], // the value is transmitted with +32768 because no negative numbers can be transmitted
-		.span_pressure =		 ((uint16_t) optBuffer[30] << 8) | optBuffer[31],
-		.T_Compensation_enable =  optBuffer[32],
+		//.offset_pressure =		 ((int16_t) optBuffer[28] << 8) | optBuffer[29], // the value is transmitted with +32768 because no negative numbers can be transmitted
+		//.span_pressure =		 ((uint16_t) optBuffer[30] << 8) | optBuffer[31],
+		.T_Compensation_enable =  optBuffer[32], //TODO Decrease bytenum by 4...
 		.Temperature_norm =      ((uint16_t) optBuffer[33] << 8) | optBuffer[34] ,
 		.p_Compensation_enable =  optBuffer[35] ,
 		.Pressure_norm =         ((uint16_t) optBuffer[36] << 8) | optBuffer[37],
@@ -1501,11 +1499,6 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 		LCD_InitScreen_AddLine("Pcomp dis",0);
 	}
 	
-	sprintf(print_temp,"poffs: %i",optholder.offset_pressure);
-	LCD_InitScreen_AddLine(print_temp,0);
-	sprintf(print_temp,"pSpan: %i",optholder.span_pressure);
-	LCD_InitScreen_AddLine(print_temp,0);
-	_delay_ms(500);
 	
 	optholder.T_Compensation_enable = 1;
 	optholder.p_Compensation_enable = 1;
@@ -1530,8 +1523,6 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	_delay_ms(1000);
 	LCD_Value(optholder.delta_p, 0, 0, 2, NULL);
 	_delay_ms(1000);
-	LCD_Value(optholder.span_pressure, 0, 0, 3, NULL);
-	_delay_ms(1000);
 	LCD_Value(optholder.Temperature_norm, 0, 0, 4, NULL);
 	_delay_ms(1000);
 	LCD_Value(optholder.Pressure_norm, 0, 0, 5, NULL);
@@ -1544,9 +1535,7 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	(0 == optholder.delta_p) ||
 	(0 == optholder.step_Volume) ||
 	(0 == optholder.Temperature_norm)||
-	(0 == optholder.Pressure_norm) ||
-	(0 == optholder.span_pressure) ||
-	(optholder.span_pressure > 20000))
+	(0 == optholder.Pressure_norm))
 	{
 		BIT_SET(sendbuffer[0],status_bit_success_setting_options_93);  // not successfully accepted
 		SET_ERROR(OPTIONS_ERROR);
@@ -1577,8 +1566,6 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	options.delta_V =  optholder.delta_V * 1000;
 	options.delta_p = optholder.delta_p;
 	options.step_Volume = optholder.step_Volume * 1000;
-	options.offset_pressure = optholder.offset_pressure;
-	options.span_pressure = optholder.span_pressure;
 	options.T_Compensation_enable = optholder.T_Compensation_enable;
 	options.Temperature_norm = optholder.Temperature_norm;
 	options.p_Compensation_enable = optholder.p_Compensation_enable;
