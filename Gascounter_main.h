@@ -33,7 +33,7 @@
 
 #define MEASBUFFER_LENGTH      250      /**< @brief Maximum number of concurrently saved Measurements*/
 #define MEASUREMENT_MESSAGE_LENGTH 23  /**< @brief Number of Bytes that makes up one Measurement Message*/
-#define NUMBER_LOGIN_BYTES	    40     /**< @brief Number of Bytes in login Message from Server   */
+#define NUMBER_LOGIN_BYTES	    36     /**< @brief Number of Bytes in login Message from Server   */
 
 #define COM_TIMEOUT_TIME 		10	/**< @brief Communication Timeout-period in Seconds  */
 
@@ -76,7 +76,7 @@
 
 #define DEF_t_transmission_min				10		// in seconds
 #define MIN_t_transmission_min				1		// in seconds
-#define MAX_t_transmission_min				5		// in seconds
+#define MAX_t_transmission_min				36000		// in seconds
 
 #define DEF_t_transmission_max				120		// in minutes
 #define MIN_t_transmission_max				1		// in minutes

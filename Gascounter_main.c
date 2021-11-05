@@ -793,7 +793,7 @@ void Temp_Press_CorrectedVolume(void)
 	if(!CHECK_ERROR(TEMPPRESS_ERROR) && connected.TWI){ // only updated when BMP is connected
 		
 		Temperature_value = BMP_Temperature;
-		Pressure_value =  BMP_Pressure/100000; // conversion from Pa to mbar
+		Pressure_value =  BMP_Pressure/10;///100000; // conversion from Pa to mbar
 		
 	}
 	uint32_t Ticks_since_last_TP_Meas;
@@ -1156,11 +1156,11 @@ void execute_server_CMDS(uint8_t reply_id){
 		sendbuffer[length++] = step_Volume_holder >> 8;
 		sendbuffer[length++] = (uint8_t) step_Volume_holder;
 		
-		sendbuffer[length++] = 0;//TODO remove
-		sendbuffer[length++] = 0;
+		//sendbuffer[length++] = 0;//TODO remove
+		//sendbuffer[length++] = 0;
 		
-		sendbuffer[length++] = 0;//TODO Remove
-		sendbuffer[length++] = 0;
+		//sendbuffer[length++] = 0;//TODO Remove
+		//sendbuffer[length++] = 0;
 		
 		sendbuffer[length++] = options.T_Compensation_enable;
 		
@@ -1410,7 +1410,7 @@ uint8_t analyze_Connection(void)
 void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	FUNCTION_TRACE
 	
-	uint8_t outofBundsFlag;
+	uint8_t outofBundsFlag =0;
 	
 	Funtrace_enter(10);
 	_delay_ms(200);
@@ -1467,16 +1467,16 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 		.step_Volume =			 (((uint32_t) optBuffer[26] << 8) | optBuffer[27])* 1000 ,
 		//.offset_pressure =		 ((int16_t) optBuffer[28] << 8) | optBuffer[29], // the value is transmitted with +32768 because no negative numbers can be transmitted
 		//.span_pressure =		 ((uint16_t) optBuffer[30] << 8) | optBuffer[31],
-		.T_Compensation_enable =  optBuffer[32], //TODO Decrease bytenum by 4...
-		.Temperature_norm =      ((uint16_t) optBuffer[33] << 8) | optBuffer[34] ,
-		.p_Compensation_enable =  optBuffer[35] ,
-		.Pressure_norm =         ((uint16_t) optBuffer[36] << 8) | optBuffer[37],
-		.Ping_Intervall = optBuffer[38]
+		.T_Compensation_enable =  optBuffer[28], //TODO Decrease bytenum by 4...
+		.Temperature_norm =      ((uint16_t) optBuffer[29] << 8) | optBuffer[30] ,
+		.p_Compensation_enable =  optBuffer[31] ,
+		.Pressure_norm =         ((uint16_t) optBuffer[32] << 8) | optBuffer[33],
+		.Ping_Intervall = optBuffer[34]
 	};
 	
 
 	
-	status_ms_bytes.byte_96 = optBuffer[39];
+	status_ms_bytes.byte_96 = optBuffer[35];
 	
 	
 
