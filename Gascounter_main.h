@@ -28,6 +28,16 @@
 // =========================================================================
 //#define USE_LAN /**< @brief LAN Hardware Variant*/
 //#define USE_XBEE /**< @brief Xbee Hardware Variant*/
+
+#ifdef USE_LAN
+
+#define WRITE_IP_TO_EEPROM false
+#define OCT1 192
+#define OCT2 168
+#define OCT3 178
+#define OCT4 89
+#endif
+
 //=========================================================================
 
 
@@ -36,7 +46,6 @@
 #define NUMBER_LOGIN_BYTES	    36     /**< @brief Number of Bytes in login Message from Server   */
 
 #define COM_TIMEOUT_TIME 		10	/**< @brief Communication Timeout-period in Seconds  */
-
 
 
 
@@ -83,7 +92,7 @@
 #define MAX_t_transmission_max				1000	// in minutes
 
 #define DEF_delta_V					      100000	// in 1 mL
-#define MIN_delta_V						   	1000	// in 1 mL
+#define MIN_delta_V						   	1000	// in 1 mLf
 #define MAX_delta_V					    65000000	// in 1 mL
 
 #define DEF_delta_p							100		// in 0.1 mbar
@@ -157,6 +166,7 @@ typedef struct {
 	uint32_t time_I2C_check;		   /**< @brief Absolute time of last I2C Peripheral checkup */
 	uint32_t time_valid_time_reading;   /**< @brief Absolute time of last Valid Time reading  */
 }lastType;
+
 
 
 

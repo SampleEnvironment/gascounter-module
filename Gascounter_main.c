@@ -249,7 +249,22 @@ uint8_t 	buffer[SINGLE_FRAME_LENGTH]; /**< @brief  Send and receive Buffer i.e. 
 uint8_t 	sendbuffer[SINGLE_FRAME_LENGTH]; /**< @brief Send only Buffer used for sending data to the server for which no reply is expected i.e. Measurement data #MEAS_MSG*/
 
 
+
+/************************************************************************/
+/*  LAN-Gascounter IPv4 Address                                         */
+/************************************************************************/
+// Put Gascounter IP here:
 #ifdef USE_LAN
+volatile IP_v4Type GCM_IP = {
+	.IP_oct_1 = OCT1,
+	.IP_oct_2 = OCT2,
+	.IP_oct_3 = OCT3,
+	.IP_oct_4 = OCT4
+	};
+//************************************************************************/
+
+IP_v4Type EEMEM ee_GCM_IP;
+
 
 _Bool CE_received = 0;
 #endif // USE_LAN
@@ -266,6 +281,8 @@ eeprom_Fun_Trace_struct eeprom_Fun_Trace = {.ringbuff_size = FUNTRACE_ARRAY_SIZE
 uint8_t EEMEM Fun_trace_array[FUNTRACE_ARRAY_SIZE+FUNTRACE_HEADER_LEN];  //eeprom Function Trace Array
 
 uint16_t EEMEM funtrace_was_activated; //word in eeprom to indicate that funtrace was activated
+
+
 
 
 
@@ -1045,6 +1062,23 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer)
 	
 	while(number_trials)
 	{
+		#ifdef USE_LAN
+		uint8_t sim_xb_rep;
+		sim_xb_rep  = xbee_hasReply(LAST_NON_CMD_MSG,GREATER_THAN);
+		if (sim_xb_rep != 0xFF && frameBuffer[sim_xb_rep].type == SIMULATE_XBEE_CMD){
+			
+			
+			sendbuffer[0] = 1;
+			
+			xbee_pseudo_send_AT_response( 'C', 'E', 0, sendbuffer, 1);
+			
+
+			
+		}
+		
+		buffer_removeData(sim_xb_rep);
+		#endif
+		
 		reply_Id = xbee_send_request_only(db_cmd_type, buffer, 1);
 		
 		//#ifdef ALLOW_DEBUG
@@ -1052,6 +1086,8 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer)
 		//LCD_InitScreen_AddLine(print_temp, 0);
 		//_delay_ms(10000);
 		//#endif
+		
+
 		
 		
 		if(reply_Id != 0xFF)
@@ -1065,6 +1101,9 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer)
 				return reply_Id;	//good options
 			}
 			else {
+				LCD_String("len false",0,0);
+				LCD_Value(frameBuffer[reply_Id].data_len,0,0,1,"num ");
+				_delay_ms(5000);
 				return 0xFF;  //bad options
 			}
 			
@@ -1669,6 +1708,20 @@ long readVcc() {
 //=========================================================================
 int main(void)
 {
+	
+	#ifdef USE_LAN
+	
+	if (WRITE_IP_TO_EEPROM)
+	{
+		eeprom_update_block(&GCM_IP,&ee_GCM_IP,sizeof(IP_v4Type));
+
+	}
+	
+	eeprom_read_block(&GCM_IP,&ee_GCM_IP,sizeof(IP_v4Type));
+	
+	#endif // USE_LAN
+	
+	
 
 	init();
 	
