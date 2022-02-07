@@ -31,7 +31,7 @@
 
 #ifdef USE_LAN
 
-#define WRITE_IP_TO_EEPROM false
+#define WRITE_IP_TO_EEPROM true
 #define OCT1 192
 #define OCT2 168
 #define OCT3 178

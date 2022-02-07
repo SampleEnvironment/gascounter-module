@@ -260,7 +260,7 @@ volatile IP_v4Type GCM_IP = {
 	.IP_oct_2 = OCT2,
 	.IP_oct_3 = OCT3,
 	.IP_oct_4 = OCT4
-	};
+};
 //************************************************************************/
 
 IP_v4Type EEMEM ee_GCM_IP;
@@ -995,12 +995,8 @@ void reset_display(void){
 	LCD_Clear();
 	_delay_ms(100);
 	
-	#ifndef FUNCTION_TRACE
-	LCD_String("A:", 0, 0); // Value
-	#endif
-	
 
-	
+	LCD_String("A:", 0, 0); // Value
 	LCD_String("V:", 0, 1); // Volume
 	LCD_String("C:", 0, 2); // CorrVolume
 	LCD_String("T:", 0, 3); // Temperature
@@ -1009,14 +1005,12 @@ void reset_display(void){
 	
 	LCD_Clear_row_from_column(3, 0);
 	
-	sprintf(print_temp,"FW: v%i.%i",Branch_id,Fw_version);
+	//sprintf(print_temp,"FW: v%i.%i",Branch_id,Fw_version);
+	//LCD_String(print_temp, 0, 0);
+
 	
-	
-	LCD_String(print_temp, 0, 0);
-	
-	#ifndef FUNCTION_TRACE
 	LCD_Value(options.Value / options.step_Volume, position_volume_dot_point, 2, 0, "m³");
-	#endif
+	
 	LCD_Clear_row_from_column(3, 1);
 	LCD_Value(options.Volume / options.step_Volume, position_volume_dot_point, 2, 1, "m³");
 	
