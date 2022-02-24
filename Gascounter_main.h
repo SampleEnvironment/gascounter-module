@@ -18,7 +18,7 @@
 #define GC_MAIN_H
 
 
-#define FIRMWARE_VERSION  208 /**< @brief  Software Version  */
+#define FIRMWARE_VERSION  209 /**< @brief  Software Version  */
 
 #define BRANCH_ID 2
 
@@ -31,11 +31,11 @@
 
 #ifdef USE_LAN
 
-#define WRITE_IP_TO_EEPROM true
+#define WRITE_IP_TO_EEPROM false
 #define OCT1 192
 #define OCT2 168
-#define OCT3 178
-#define OCT4 89
+#define OCT3 0
+#define OCT4 50
 #endif
 
 //=========================================================================

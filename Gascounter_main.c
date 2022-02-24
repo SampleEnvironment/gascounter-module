@@ -1095,8 +1095,10 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer)
 				return reply_Id;	//good options
 			}
 			else {
+				LCD_Clear();
 				LCD_String("len false",0,0);
 				LCD_Value(frameBuffer[reply_Id].data_len,0,0,1,"num ");
+				_delay_ms(5000);
 				_delay_ms(5000);
 				return 0xFF;  //bad options
 			}
@@ -1749,19 +1751,122 @@ int main(void)
 	// Try to establish connection to the network
 	//=========================================================================
 	#ifdef USE_LAN
+	LCD_InitScreen_AddLine("Pls. activate",0);
+	LCD_InitScreen_AddLine("Coordinator",0);
 
-	uint8_t reply_id = xbee_send_login_msg(LOGIN_MSG, buffer);
+	_delay_ms(3000);
 	
-	if (reply_id!= 0xFF ){ // GOOD OPTIONS RECEIVED
-		Set_Options(frameBuffer[reply_id].data,OPTIONS_SET_ACK);
-	}
-	else // DEFECTIVE OPTIONS RECEIVED OR NO NETWORK
+	
+	//reset timer!
+	uint32_t time_first_try = count_t_elapsed;
+	uint8_t delta_t;
+	
+	uint8_t sim_xb_rep = 0xFF;
+	
+	_Bool CoordActive = false;
+	// main part
+	while(1)
 	{
-		SET_ERROR(OPTIONS_ERROR);
-		SET_ERROR(INIT_OFFLINE_ERROR);
+		delta_t = count_t_elapsed - time_first_try;
+		if(delta_t > 60)
+		{
+			LCD_InitScreen_AddLine("...failed!",0);
+			LCD_InitScreen_AddLine("offline mode",0);
+			SET_ERROR(INIT_OFFLINE_ERROR);
+			break;			//stop trying on timeout return bad reply
+		}
+		
+		sim_xb_rep  = xbee_hasReply(LAST_NON_CMD_MSG,GREATER_THAN);
+		if (sim_xb_rep != 0xFF && frameBuffer[sim_xb_rep].type == SIMULATE_XBEE_CMD){
+			CoordActive = 1;
+			
+			sendbuffer[0] = 1;
+			
+			xbee_pseudo_send_AT_response( 'C', 'E', 0, sendbuffer, 1);
+			break;			//stop trying Coordinator was activated
+
+			
+		}
+		
 	}
 	
-	
+	sim_xb_rep = 0xFF;
+
+	if (CoordActive)
+	{
+		
+		uint8_t ip_rep_ID = 0xFF;
+		time_first_try = count_t_elapsed;
+		LCD_InitScreen_AddLine("Current IP:",1);
+		
+		sprintf(print_temp,"%3i.", GCM_IP.IP_oct_1);
+		LCD_InitScreen_AddLine(print_temp,0);
+		sprintf(print_temp,"%3i.",GCM_IP.IP_oct_2);
+		LCD_InitScreen_AddLine(print_temp,0);
+		sprintf(print_temp,"%3i.",GCM_IP.IP_oct_3);
+		LCD_InitScreen_AddLine(print_temp,0);
+		sprintf(print_temp,"%3i",GCM_IP.IP_oct_4);
+		LCD_InitScreen_AddLine(print_temp,0);
+
+		while(1)
+		{
+			delta_t = count_t_elapsed - time_first_try;
+			if(delta_t > 20)
+			{
+				LCD_InitScreen_AddLine("continue with",1);
+				LCD_InitScreen_AddLine("EEPROM IP",0);
+				_delay_ms(4000);
+				break;			//stop trying on timeout return bad reply
+			}
+			
+			//TODO replace with correct command
+			ip_rep_ID = xbee_hasReply(SET_FUNTRACE_CMD,EQUAL);
+			if (ip_rep_ID!= 0xFF ){ // New IP-Address received
+			
+					GCM_IP.IP_oct_1 =  frameBuffer[ip_rep_ID].data[0];
+					GCM_IP.IP_oct_2 =  frameBuffer[ip_rep_ID].data[1];
+					GCM_IP.IP_oct_3 =  frameBuffer[ip_rep_ID].data[2];
+				    GCM_IP.IP_oct_4 =  frameBuffer[ip_rep_ID].data[3];
+				
+				//update EEPROM IP
+				eeprom_update_block(&GCM_IP,&ee_GCM_IP,sizeof(IP_v4Type));
+				
+
+				
+				LCD_InitScreen_AddLine("New IP:",1);
+				
+				sprintf(print_temp,"%3i.", GCM_IP.IP_oct_1);
+				LCD_InitScreen_AddLine(print_temp,0);
+				sprintf(print_temp,"%3i.",GCM_IP.IP_oct_2);
+				LCD_InitScreen_AddLine(print_temp,0);
+				sprintf(print_temp,"%3i.",GCM_IP.IP_oct_3);
+				LCD_InitScreen_AddLine(print_temp,0);
+				sprintf(print_temp,"%3i",GCM_IP.IP_oct_4);
+				LCD_InitScreen_AddLine(print_temp,0);
+				
+				_delay_ms(5000);
+				
+				//continue with request for options
+				break;
+				
+
+			}
+			
+		}
+		
+		// Coordinator is active and IP should be set correctly --> Send login data
+		uint8_t reply_id = xbee_send_login_msg(LOGIN_MSG, buffer);
+		
+		if (reply_id!= 0xFF ){ // GOOD OPTIONS RECEIVED
+			Set_Options(frameBuffer[reply_id].data,OPTIONS_SET_ACK);
+		}
+		else // DEFECTIVE OPTIONS RECEIVED OR NO NETWORK
+		{
+			SET_ERROR(OPTIONS_ERROR);
+			SET_ERROR(INIT_OFFLINE_ERROR);
+		}
+		
+	}
 	#endif
 
 	#ifdef USE_XBEE
