@@ -29,14 +29,7 @@
 //#define USE_LAN /**< @brief LAN Hardware Variant*/
 //#define USE_XBEE /**< @brief Xbee Hardware Variant*/
 
-#ifdef USE_LAN
 
-#define WRITE_IP_TO_EEPROM false
-#define OCT1 192
-#define OCT2 168
-#define OCT3 0
-#define OCT4 50
-#endif
 
 //=========================================================================
 

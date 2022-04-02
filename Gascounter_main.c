@@ -35,6 +35,7 @@
 #include "usart.h"
 #include "xbee.h"
 #include "xbee_utilities.h"
+#include "xbee_AT_comm.h"
 #include "status.h"
 #include "DS3231M.h"
 #include "BMP085.h"
@@ -256,10 +257,10 @@ uint8_t 	sendbuffer[SINGLE_FRAME_LENGTH]; /**< @brief Send only Buffer used for 
 // Put Gascounter IP here:
 #ifdef USE_LAN
 volatile IP_v4Type GCM_IP = {
-	.IP_oct_1 = OCT1,
-	.IP_oct_2 = OCT2,
-	.IP_oct_3 = OCT3,
-	.IP_oct_4 = OCT4
+	.IP_oct_1 = 0,
+	.IP_oct_2 = 0,
+	.IP_oct_3 = 0,
+	.IP_oct_4 = 0
 };
 //************************************************************************/
 
@@ -675,7 +676,7 @@ void displayTemPreVol(void){
 	}
 	else{
 		LCD_Clear_row_from_column(2, 3);
-		LCD_String("Tmp Err",0,3);
+		LCD_String("TEMP ERR",3,3);
 	}
 	
 	
@@ -687,7 +688,7 @@ void displayTemPreVol(void){
 	}
 	else{
 		LCD_Clear_row_from_column(2, 3);
-		LCD_String("Press Err",0,4);
+		LCD_String("PRESS ERR",3,4);
 	}
 	
 
@@ -1705,19 +1706,7 @@ long readVcc() {
 int main(void)
 {
 	
-	#ifdef USE_LAN
-	
-	if (WRITE_IP_TO_EEPROM)
-	{
-		eeprom_update_block(&GCM_IP,&ee_GCM_IP,sizeof(IP_v4Type));
 
-	}
-	
-	eeprom_read_block(&GCM_IP,&ee_GCM_IP,sizeof(IP_v4Type));
-	
-	#endif // USE_LAN
-	
-	
 
 	init();
 	
@@ -1795,70 +1784,12 @@ int main(void)
 	if (CoordActive)
 	{
 		
-		uint8_t ip_rep_ID = 0xFF;
-		time_first_try = count_t_elapsed;
-		LCD_InitScreen_AddLine("Current IP:",1);
-		
-		sprintf(print_temp,"%3i.", GCM_IP.IP_oct_1);
-		LCD_InitScreen_AddLine(print_temp,0);
-		sprintf(print_temp,"%3i.",GCM_IP.IP_oct_2);
-		LCD_InitScreen_AddLine(print_temp,0);
-		sprintf(print_temp,"%3i.",GCM_IP.IP_oct_3);
-		LCD_InitScreen_AddLine(print_temp,0);
-		sprintf(print_temp,"%3i",GCM_IP.IP_oct_4);
-		LCD_InitScreen_AddLine(print_temp,0);
-
-		while(1)
-		{
-			delta_t = count_t_elapsed - time_first_try;
-			if(delta_t > 20)
-			{
-				LCD_InitScreen_AddLine("continue with",1);
-				LCD_InitScreen_AddLine("EEPROM IP",0);
-				_delay_ms(4000);
-				break;			//stop trying on timeout return bad reply
-			}
-			
-			//TODO replace with correct command
-			ip_rep_ID = xbee_hasReply(SET_FUNTRACE_CMD,EQUAL);
-			if (ip_rep_ID!= 0xFF ){ // New IP-Address received
-			
-					GCM_IP.IP_oct_1 =  frameBuffer[ip_rep_ID].data[0];
-					GCM_IP.IP_oct_2 =  frameBuffer[ip_rep_ID].data[1];
-					GCM_IP.IP_oct_3 =  frameBuffer[ip_rep_ID].data[2];
-				    GCM_IP.IP_oct_4 =  frameBuffer[ip_rep_ID].data[3];
-				
-				//update EEPROM IP
-				eeprom_update_block(&GCM_IP,&ee_GCM_IP,sizeof(IP_v4Type));
-				
-
-				
-				LCD_InitScreen_AddLine("New IP:",1);
-				
-				sprintf(print_temp,"%3i.", GCM_IP.IP_oct_1);
-				LCD_InitScreen_AddLine(print_temp,0);
-				sprintf(print_temp,"%3i.",GCM_IP.IP_oct_2);
-				LCD_InitScreen_AddLine(print_temp,0);
-				sprintf(print_temp,"%3i.",GCM_IP.IP_oct_3);
-				LCD_InitScreen_AddLine(print_temp,0);
-				sprintf(print_temp,"%3i",GCM_IP.IP_oct_4);
-				LCD_InitScreen_AddLine(print_temp,0);
-				
-				_delay_ms(5000);
-				
-				//continue with request for options
-				break;
-				
-
-			}
-			
-		}
 		
 		// Coordinator is active and IP should be set correctly --> Send login data
 		uint8_t reply_id = xbee_send_login_msg(LOGIN_MSG, buffer);
 		
 		if (reply_id!= 0xFF ){ // GOOD OPTIONS RECEIVED
-			Set_Options(frameBuffer[reply_id].data,OPTIONS_SET_ACK);
+			Set_Options((uint8_t *)frameBuffer[reply_id].data,OPTIONS_SET_ACK);
 		}
 		else // DEFECTIVE OPTIONS RECEIVED OR NO NETWORK
 		{
