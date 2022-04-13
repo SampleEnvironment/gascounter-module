@@ -32,6 +32,8 @@
 
 
 #include "Gascounter_main.h"
+#include "display_driver.h"
+#include "display.h"
 #include "usart.h"
 #include "xbee.h"
 #include "xbee_utilities.h"
@@ -466,37 +468,23 @@ void store_measurement(void)
 */
 void init(void)
 {
-	init_LCD();
+
 	
 	_delay_ms(500);
 	version_INIT(FIRMWARE_VERSION,BRANCH_ID,FIRMWARE_VERSION);
 	
 	init_ports();
 	
-	
-	LCD_InitScreen_AddLine("HZB Gascount",1);
-	sprintf(print_temp,"v%i.%i",version.Branch_id,version.Fw_version);
-	LCD_InitScreen_AddLine(print_temp,0);
-	#ifdef USE_LAN
-	LCD_InitScreen_AddLine("LAN-VARIANT",0);
-	#endif
-	#ifdef USE_XBEE
-	LCD_InitScreen_AddLine("XBEE-VARIANT",0);
-	#endif
-	
-	_delay_ms(2000); // the delay is for the xbee to start when the system is plugged in
-	
-	LCD_InitScreen_AddLine("Init start",1);
 
-	LCD_InitScreen_AddLine("Init ports",0);
+
 	
-	LCD_InitScreen_AddLine("Init timer",0);
+
 	init_timer();
-	LCD_InitScreen_AddLine("Init interr.",0);
+
 	init_interrupts();
-	LCD_InitScreen_AddLine("Init usart",0);
+
 	usart_init(39);
-	LCD_InitScreen_AddLine("Init I2C",0);
+
 	i2c_init();
 
 
@@ -514,48 +502,12 @@ void init(void)
 
 
 
-	// Timer
-	LCD_InitScreen_AddLine("Init Clock",0);
-
-	if (init_DS3231M(&LCD_paint_info_line) == 0) // trying to connect with DS3231M (time)
-	{
-		connected.DS3231M = 1;
-		LCD_InitScreen_AddLine("...success",0);
-	}
-	else
-	{
-		connected.DS3231M = 0;
-		SET_ERROR(TIMER_ERROR);
-		LCD_InitScreen_AddLine("...error",0);
-	}
-
-	// Pressure and Temperature Sensor
-	LCD_InitScreen_AddLine("Init Press",0);
-	
-	if (init_BMP(&LCD_paint_info_line) == 0) // trying to connect with BMP
-	{
-		connected.BMP = 1;
-		connected.BMP_on_Startup = 1;
-		LCD_InitScreen_AddLine("...success",0);
-		CLEAR_ERROR(TEMPPRESS_ERROR);;
-	}
-	else
-	{
-		
-		connected.BMP = 0;
-		connected.BMP_on_Startup = 0;
-		connected.TWI = 1;
-		BMP_Temperature = 0;
-		BMP_Pressure = 0;
-		LCD_InitScreen_AddLine(" ",0);
-
-	}
 	
 	
 	xbee_init(&LCD_paint_info_line,NULL,0);
 	
 	xbee_hardware_version();
-	LCD_InitScreen_AddLine("Init done",0);
+
 	
 }
 
@@ -1705,10 +1657,23 @@ long readVcc() {
 //=========================================================================
 int main(void)
 {
-	
-
-
+	// Display light control pin
+	DDRD |= (1<<DDD6);			// Set Pin B0 as output
 	init();
+	
+	LCD_Init();
+		glcd_led_on();
+	_delay_ms(500);
+		LCD_Cls(white);
+
+		LCD_LOGO(15,60,white);
+	
+	while(1){
+
+	}
+
+
+	//init();
 	
 	
 	//=========================================================================

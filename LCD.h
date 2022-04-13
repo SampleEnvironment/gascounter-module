@@ -31,10 +31,10 @@
 
 
 #define LCD_CMD     0 // command
-#define LCD_DATA    1 // data
+#define LCD_DATA_old    1 // data
 
 #define LCD_DDR DDRB
-#define LCD_PORT PORTB
+#define LCD_PORT_old PORTB
 
 #define LCD_X     84
 #define LCD_Y     48

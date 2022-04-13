@@ -27,23 +27,23 @@ uint8_t InitScreenNextLine = 1;
  */
 void LCD_Character(char character)
 {
-	LCD_Write(LCD_DATA, 0x00);
+	LCD_Write(LCD_DATA_old, 0x00);
 	for (uint8_t index = 0; index < 5; index++)
 	{
 		switch (character) // for additional characters who aren't in ASCII
 		{
 			case '³':
-				LCD_Write(LCD_DATA, additional_char[0][index]);
+				LCD_Write(LCD_DATA_old, additional_char[0][index]);
 				break;
 			case '°':
-				LCD_Write(LCD_DATA, additional_char[1][index]);
+				LCD_Write(LCD_DATA_old, additional_char[1][index]);
 				break;
 			default:
-				LCD_Write(LCD_DATA, ASCII[character - 0x20][index]);
+				LCD_Write(LCD_DATA_old, ASCII[character - 0x20][index]);
 				break;
 		}
 	}
-	LCD_Write(LCD_DATA, 0x00);
+	LCD_Write(LCD_DATA_old, 0x00);
 }
 
 
@@ -57,7 +57,7 @@ void LCD_Clear(void)
 {
 	for (int index = 0; index < ((LCD_X * LCD_Y) >> 3); index++)
 	{
-		LCD_Write(LCD_DATA, 0x00);
+		LCD_Write(LCD_DATA_old, 0x00);
 	}
 }
 
@@ -78,7 +78,7 @@ void LCD_Clear_row_from_column_to_column(uint8_t from_x, uint8_t to_x, uint8_t y
 	// the addition is for the multiplication with 7
 	for (i = 0; i < ((to_x + to_x + to_x + to_x + to_x + to_x + to_x) - (from_x + from_x + from_x + from_x + from_x + from_x + from_x)); i++)
 	{
-		LCD_Write(LCD_DATA, 0x00);
+		LCD_Write(LCD_DATA_old, 0x00);
 	}
 }
 
@@ -99,7 +99,7 @@ void LCD_Clear_row_from_column(uint8_t x, uint8_t y)
 	/////////////////////////for the multiplication with 7
 	for (i = 0; i < LCD_X - (x+x+x+x+x+x+x); i++)
 	{
-		LCD_Write(LCD_DATA, 0x00);
+		LCD_Write(LCD_DATA_old, 0x00);
 	}
 }
 
@@ -115,9 +115,9 @@ void init_LCD(void)
 	
 	LCD_DDR |= (1<<PIN_DC) | (1<<PIN_RESET) | (1<<PIN_SCE) | (1<<PIN_SCLK) | (1<<PIN_SDIN); // sets the pins for the LCD as outputs
 	
-	LCD_PORT &= ~(1<<PIN_RESET);
+	LCD_PORT_old &= ~(1<<PIN_RESET);
 	_delay_ms(10);
-	LCD_PORT |= (1<<PIN_RESET);
+	LCD_PORT_old |= (1<<PIN_RESET);
 	_delay_ms(10);
 	
 	
@@ -424,18 +424,18 @@ void LCD_Write(uint8_t dc, uint8_t data)
 {
 	if (dc) // for the Data-Command Pin
 	{
-		LCD_PORT |= (1<<PIN_DC);
+		LCD_PORT_old |= (1<<PIN_DC);
 	}
 	else
 	{
-		LCD_PORT &= ~(1<<PIN_DC);
+		LCD_PORT_old &= ~(1<<PIN_DC);
 	}
 	
-	LCD_PORT &= ~(1<<PIN_SCE); // enables the receiving of data or commands
+	LCD_PORT_old &= ~(1<<PIN_SCE); // enables the receiving of data or commands
 	
 	LCD_ShiftOut(PIN_SDIN, PIN_SCLK, data); 
 	
-	LCD_PORT |= (1<<PIN_SCE); // disables the receiving of data or commands 
+	LCD_PORT_old |= (1<<PIN_SCE); // disables the receiving of data or commands 
 }
 
 
@@ -469,15 +469,15 @@ void LCD_ShiftOut(uint8_t data_pin, uint8_t clock_pin, uint8_t data)
 	{
 		if ((data>>(7-i)) & 0x01)
 		{
-			LCD_PORT |= (1<<data_pin);
+			LCD_PORT_old |= (1<<data_pin);
 		}
 		else
 		{
-			LCD_PORT &= ~(1<<data_pin);
+			LCD_PORT_old &= ~(1<<data_pin);
 		}
 		
-		LCD_PORT |= (1<<clock_pin);
-		LCD_PORT &= ~(1<<clock_pin);
+		LCD_PORT_old |= (1<<clock_pin);
+		LCD_PORT_old &= ~(1<<clock_pin);
 	}
 }
 
