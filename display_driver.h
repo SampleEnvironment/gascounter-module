@@ -12,25 +12,7 @@
 #include <avr/pgmspace.h>
 
 
-// COLORS
-#define bright_blue		0b1101111011011111	//Predefined colors will make programmers life easier
-#define blue			0b0000000000011111
-#define dark_blue		0b0000000000010011
-#define bright_yellow	0b1111111111001100	//as the display uses 65.536 colors we have to define double-bytes for each color
-#define yellow			0b1111111111100000	//Check the programmers manual to learn how to define your own color
-#define orange			0b1111110011000110
-#define bright_red		0b1111100011100011
-#define red				0b1111100000000000
-#define dark_red		0b1001100000000000
-#define bright_green 	0b1001111111110011
-#define green 			0b0000011111100000
-#define dark_green 		0b0000001101100000
-#define white 			0b1111111111111111
-#define grey 			0b0011100011100111
-#define black 			0b0000000000000000
 
-#define HZB_Blue        0b0000001011010011
-#define HZB_Cyan        0b0000010011111100
 
 
 #define LCD_CLK 		PINB3//7		// Clock

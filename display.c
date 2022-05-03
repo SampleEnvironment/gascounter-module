@@ -24,6 +24,15 @@
 
 
 
+
+
+
+
+
+
+
+
+
 #include <stdio.h>
 #include <avr/io.h>
 #include <util/delay.h>
@@ -33,9 +42,11 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "display_driver.h"
+
 #include "display.h"
 #include "StringPixelCoordTable_ili9341.h"
+#include "display_driver.h"
+#include "DispAdapter.h"
 
 
 
@@ -77,10 +88,9 @@ struct Logo
 
 
 
-struct Logo HZB_logo = {.w = 290,.h = 102, .data_len = 3774,.bytes_per_line = 37,.h_Blue = 65};
-
-extern const uint8_t HZB_LOGO_ili9341[] PROGMEM;
-
+struct Logo HZB_logo = {.w = 160,.h = 56, .data_len = 1120,.bytes_per_line = 20,.h_Blue = 37};
+	
+extern const uint8_t HZB_LOGO_DISP_3000[] PROGMEM;
 
 
 extern const uint8_t Font3[],Font4[],Font5[] PROGMEM;	// Shared font arrays stored in Program-Memory
@@ -218,7 +228,7 @@ void LCD_LOGO(uint16_t x, uint16_t y,uint16_t BackColor){
 	{
 
 
-		uint8_t Byte  = pgm_read_byte(&HZB_LOGO_ili9341[arr_index]);
+		uint8_t Byte  = pgm_read_byte(&HZB_LOGO_DISP_3000[arr_index]);
 
 		
 
@@ -439,17 +449,5 @@ void LCD_Draw_Cross(uint16_t x0,uint16_t y0,uint16_t x1,uint16_t y1){
 	LCD_Draw(x0,y0,x1,y1,0,red);
 	LCD_Draw(x0,y1,x1,y0,0,red);
 }
-
-
-
-
-
-
-// ------------------------------------------------------------------------------------------------------
-// History
-// V1.03: 07.05.2008: speed up of filled circle by optimizing the code
-// V1.03: 07.05.2008: Corrected the status of the "CS" line which could cause a problem when using several devices on the SPI bus
-// V1.02: 29.04.2008: optimized some of the SPI line settings
-// V1.01: first official version of Library
 
 

@@ -32,8 +32,8 @@
 
 
 #include "Gascounter_main.h"
-#include "display_driver.h"
-#include "display.h"
+#include "config.h"
+#include "DispAdapter.h"
 #include "usart.h"
 #include "xbee.h"
 #include "xbee_utilities.h"
@@ -46,6 +46,7 @@
 #include "module_globals.h"
 #include "adwandler.h"
 #include "assert.h"
+
 
 
 
@@ -1661,14 +1662,17 @@ int main(void)
 	DDRD |= (1<<DDD6);			// Set Pin B0 as output
 	init();
 	
-	LCD_Init();
-		glcd_led_on();
-	_delay_ms(500);
-		LCD_Cls(white);
+	lcd_init();
 
-		LCD_LOGO(15,60,white);
+	
+
+	
+	lcd_Cls(white);
+
+	lcd_LOGO(45,60,white);
 	
 	while(1){
+		
 
 	}
 

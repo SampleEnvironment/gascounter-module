@@ -193,6 +193,8 @@ _Bool LCD_Dialog(char *title, char *text, unsigned int BackColor, unsigned int F
 void LCD_hline(unsigned int x0, unsigned int y0, unsigned int length, unsigned int color);
 void LCD_vline(unsigned int x0, unsigned int y0, unsigned int length, unsigned int color);
 
+void LCD_Draw_Cross(uint16_t x0,uint16_t y0,uint16_t x1,uint16_t y1);
+
 #define THICK   1 /** blablalbadkfjsdlfj */
 #define THIN    0
 
