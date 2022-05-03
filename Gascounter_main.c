@@ -1664,9 +1664,6 @@ int main(void)
 	
 	lcd_init();
 
-	
-
-	
 	lcd_Cls(white);
 
 	lcd_LOGO(45,60,white);
