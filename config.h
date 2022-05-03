@@ -12,7 +12,7 @@
 
 // Display Version:
 #define ili9341
-#define old_LCD 
+//#define old_LCD 
 
 
 #define FIRMWARE_VERSION  209 /**< @brief  Software Version  */

@@ -317,6 +317,9 @@
     <Compile Include="LCD.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="StringPixelCoordTable_ili9341.h">
+      <SubType>compile</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="avr-util-library\" />

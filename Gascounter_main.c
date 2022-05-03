@@ -124,7 +124,10 @@ optType options = {.offsetValue = DEF_offsetValue,
 	.Temperature_norm = DEF_Temperature_norm,
 	.p_Compensation_enable = DEF_p_Compensation_enable,
 	.Pressure_norm = DEF_Pressure_norm,
-	.Ping_Intervall = DEF_Ping_Intervall
+	.Ping_Intervall = DEF_Ping_Intervall,
+	.Temperature_value = 0,
+	.Pressure_value = 0
+	
 };
 
 /************************************************************************/
@@ -186,13 +189,13 @@ const uint8_t Measure_Interval = 1;
 *
 * Temperature Value that is sent periodically to the server (in 0.1K)
 */
-volatile int32_t Temperature_value = 0;
+
 /**
 * @brief Pressure
 *
 * Pressure Value that is sent periodically to the server (in 0.1mbar)
 */
-volatile uint32_t Pressure_value = 0;
+
 
 // TODO maybe consolidate into struct within BMP.h file
 int16_t BMP_Pressure_old = 0;
@@ -382,11 +385,11 @@ void Collect_Measurement_Data(void){
 	sendbuffer[16] = CorrVolume_holder >> 8;
 	sendbuffer[17] = (uint8_t) CorrVolume_holder;
 	
-	sendbuffer[18] = Temperature_value >> 8;
-	sendbuffer[19] = (uint8_t) Temperature_value;
+	sendbuffer[18] = options.Temperature_value >> 8;
+	sendbuffer[19] = (uint8_t) options.Temperature_value;
 	
-	sendbuffer[20] = Pressure_value >> 8;
-	sendbuffer[21] = (uint8_t) Pressure_value;
+	sendbuffer[20] = options.Pressure_value >> 8;
+	sendbuffer[21] = (uint8_t) options.Pressure_value;
 	
 	uint8_t curr_Stat = 0;
 	
@@ -469,6 +472,13 @@ void store_measurement(void)
 */
 void init(void)
 {
+	
+	lcd_init();
+
+	lcd_Cls(white);
+
+	lcd_LOGO(45,60,white);
+	
 
 	
 	_delay_ms(500);
@@ -477,15 +487,48 @@ void init(void)
 	init_ports();
 	
 
+	#ifdef ili9341
+	setInitScreen(white,white,6,1,1,1);
+	Print_add_Line("HZB Gascount",0);
+	#endif
+	
+	#ifdef old_LCD
+	Print_add_Line("HZB Gascount",1);
+	#endif
 
 	
 
+	sprintf(print_temp,"v%i.%i",version.Branch_id,version.Fw_version);
+	Print_add_Line(print_temp,0);
+	#ifdef USE_LAN
+	Print_add_Line("LAN-VARIANT",0);
+	#endif
+	#ifdef USE_XBEE
+	Print_add_Line("XBEE-VARIANT",0);
+	#endif
+	
+
+	
+	
+	#ifdef ili9341
+	Print_add_Line("Init start",0);
+	#endif
+	
+	#ifdef old_LCD
+	_delay_ms(2000); // the delay is for the xbee to start when the system is plugged in
+	Print_add_Line("Init start",1);
+	#endif
+
+
+	Print_add_Line("Init ports",0);
+	
+	Print_add_Line("Init timer",0);
 	init_timer();
-
+	Print_add_Line("Init interr.",0);
 	init_interrupts();
-
+	Print_add_Line("Init usart",0);
 	usart_init(39);
-
+	Print_add_Line("Init I2C",0);
 	i2c_init();
 
 
@@ -503,12 +546,52 @@ void init(void)
 
 
 
+	// Timer
+	Print_add_Line("Init Clock",0);
+
+	if (init_DS3231M(&paint_info_line) == 0) // trying to connect with DS3231M (time)
+	{
+		connected.DS3231M = 1;
+		Print_add_Line("...success",0);
+	}
+	else
+	{
+		connected.DS3231M = 0;
+		SET_ERROR(TIMER_ERROR);
+		Print_add_Line("...error",0);
+	}
+
+	// Pressure and Temperature Sensor
+	Print_add_Line("Init Press",0);
+	
+	if (init_BMP(&paint_info_line) == 0) // trying to connect with BMP
+	{
+		connected.BMP = 1;
+		connected.BMP_on_Startup = 1;
+		Print_add_Line("...success",0);
+		CLEAR_ERROR(TEMPPRESS_ERROR);;
+	}
+	else
+	{
+		
+		connected.BMP = 0;
+		connected.BMP_on_Startup = 0;
+		connected.TWI = 1;
+		BMP_Temperature = 0;
+		BMP_Pressure = 0;
+		Print_add_Line(" ",0);
+
+	}
 	
 	
-	xbee_init(&LCD_paint_info_line,NULL,0);
+	xbee_init(&paint_info_line,NULL,0);
 	
 	xbee_hardware_version();
-
+	Print_add_Line("Init done",0);
+	
+	while (1)
+	{
+	}
 	
 }
 
@@ -573,59 +656,31 @@ void init_interrupts(void)
 void displayTemPreVol(void){
 	
 	Funtrace_enter(3);
-	#ifdef USE_DISPLAY
-	/*
-	LCD_Clear_row_from_column(0,0);
+	
+	
+	#ifdef ili9341
+	
 
-	sprintf(print_temp,BYTE_TO_BINARY_PATTERN,BYTE_TO_BINARY(status.device));
-	LCD_String(print_temp,0,0);
-	
-	sprintf(print_temp,"%i.%i.20%i",Time.tm_mday,Time.tm_mon,Time.tm_year);
-	LCD_String(print_temp,0,0);
-	
-	*/
 	
 	
 	if ( CHECK_ERROR(TEMPPRESS_ERROR))
 	{
-		/*
-		LCD_Clear();
-		LCD_String("TempComp is",0,0);
-		LCD_String("enabled but",0,1);
-		LCD_String("no conn to",0,2);
-		LCD_String("TempPress",0,3);
-		LCD_String("Sensor (BMP)",0,4);
-		_delay_ms(2000);
-		*/
-		LCD_Clear_row_from_column(2, 3);
-		LCD_String("TEMP ERR",3,3);
+		paint_temp("TEMP ERR",1,"");
 	}
 	if (CHECK_ERROR(TEMPPRESS_ERROR))
 	{
-		/*
-		LCD_Clear();
-		LCD_String("PressComp is",0,0);
-		LCD_String("enabled but",0,1);
-		LCD_String("no conn to",0,2);
-		LCD_String("TempPress",0,3);
-		LCD_String("Sensor (BMP)",0,4);
-		_delay_ms(2000);
-		*/
-		LCD_Clear_row_from_column(2, 4);
-		LCD_String("PRESS ERR",3,4);
+		paint_press("PRESS ERR",1,"");
 		if (options.T_Compensation_enable){
-			LCD_String("TEMP ERR",3,3);
+			paint_temp("TEMP ERR",1,"");
 		}
 
 	}
-	
-
 	
 	// TEMPERATURE
 	if (!(options.T_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
 	{
 		LCD_Clear_row_from_column(2, 3);
-		LCD_Value((int32_t) Temperature_value - 2732, 1, 2, 3, "°C");
+		LCD_Value((int32_t) options.Temperature_value - 2732, 1, 2, 3, "°C");
 	}
 	else{
 		LCD_Clear_row_from_column(2, 3);
@@ -637,7 +692,7 @@ void displayTemPreVol(void){
 	if(!(options.p_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
 	{
 		LCD_Clear_row_from_column(2, 4);
-		LCD_Value(Pressure_value, 1, 2, 4, "mbar");
+		LCD_Value(options.Pressure_value, 1, 2, 4, "mbar");
 	}
 	else{
 		LCD_Clear_row_from_column(2, 3);
@@ -719,11 +774,177 @@ void displayTemPreVol(void){
 	if (ex_mode == online)
 	{
 		
-		LCD_paint_info_line(NetStat[0],0);
+		paint_info_line(NetStat[0],0);
 	}
 	else
 	{
-		LCD_paint_info_line(NetStat[NetStatIndex],0);
+		paint_info_line(NetStat[NetStatIndex],0);
+	}
+	
+	
+	#ifndef FUNCTION_TRACE
+	LCD_String("A:", 0, 0); // Value
+	#endif
+	
+	LCD_String("V:", 0, 1); // Volume
+	LCD_String("C:", 0, 2); // CorrVolume
+	LCD_String("T:", 0, 3); // Temperature
+	LCD_String("P:", 0, 4); // Pressure
+	
+	
+	#endif
+
+	#ifdef old_LCD
+	/*
+	LCD_Clear_row_from_column(0,0);
+
+	sprintf(print_temp,BYTE_TO_BINARY_PATTERN,BYTE_TO_BINARY(status.device));
+	LCD_String(print_temp,0,0);
+	
+	sprintf(print_temp,"%i.%i.20%i",Time.tm_mday,Time.tm_mon,Time.tm_year);
+	LCD_String(print_temp,0,0);
+	
+	*/
+	
+	
+	if ( CHECK_ERROR(TEMPPRESS_ERROR))
+	{
+		/*
+		LCD_Clear();
+		LCD_String("TempComp is",0,0);
+		LCD_String("enabled but",0,1);
+		LCD_String("no conn to",0,2);
+		LCD_String("TempPress",0,3);
+		LCD_String("Sensor (BMP)",0,4);
+		_delay_ms(2000);
+		*/
+		LCD_Clear_row_from_column(2, 3);
+		LCD_String("TEMP ERR",3,3);
+	}
+	if (CHECK_ERROR(TEMPPRESS_ERROR))
+	{
+		/*
+		LCD_Clear();
+		LCD_String("PressComp is",0,0);
+		LCD_String("enabled but",0,1);
+		LCD_String("no conn to",0,2);
+		LCD_String("TempPress",0,3);
+		LCD_String("Sensor (BMP)",0,4);
+		_delay_ms(2000);
+		*/
+		LCD_Clear_row_from_column(2, 4);
+		LCD_String("PRESS ERR",3,4);
+		if (options.T_Compensation_enable){
+			LCD_String("TEMP ERR",3,3);
+		}
+
+	}
+	
+
+	
+	// TEMPERATURE
+	if (!(options.T_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
+	{
+		LCD_Clear_row_from_column(2, 3);
+		LCD_Value((int32_t) options.Temperature_value - 2732, 1, 2, 3, "°C");
+	}
+	else{
+		LCD_Clear_row_from_column(2, 3);
+		LCD_String("TEMP ERR",3,3);
+	}
+	
+	
+	//PRESSURE
+	if(!(options.p_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
+	{
+		LCD_Clear_row_from_column(2, 4);
+		LCD_Value(options.Pressure_value, 1, 2, 4, "mbar");
+	}
+	else{
+		LCD_Clear_row_from_column(2, 3);
+		LCD_String("PRESS ERR",3,4);
+	}
+	
+
+	if (!connected.BMP &&  connected.BMP_on_Startup)
+	{
+		LCD_Clear_row_from_column(2, 3);
+		LCD_String("BMP Sensor",2,3);
+		LCD_Clear_row_from_column(2, 4);
+		LCD_String("Error",2,4);
+		
+		
+	}
+
+
+
+	
+	//VOLUME
+	#ifndef FUNCTION_TRACE
+	LCD_Clear_row_from_column(3, 0);
+	LCD_Value(options.Value / options.step_Volume, position_volume_dot_point, 2, 0, "m³");
+	#endif
+	
+	LCD_Clear_row_from_column(3, 1);
+	LCD_Value(options.Volume / options.step_Volume, position_volume_dot_point, 2, 1, "m³");
+	
+	LCD_Clear_row_from_column(3, 2);
+	LCD_Value(options.CorrVolume / options.step_Volume, position_volume_dot_point, 2, 2, "m³");
+	
+	DS3231M_read_time();
+	
+	
+	if (connected.TWI && connected.DS3231M)
+	{
+		if ((Time.tm_hour < 10))
+		{ if (Time.tm_min < 10) sprintf(print_temp,"0%i:0%i", Time.tm_hour, Time.tm_min);
+			else sprintf(print_temp,"0%i:%i", Time.tm_hour, Time.tm_min);
+		}
+		if (!(Time.tm_hour < 10))
+		{ if (Time.tm_min < 10) sprintf(print_temp,"%i:0%i", Time.tm_hour, Time.tm_min);
+			else sprintf(print_temp,"%i:%i", Time.tm_hour, Time.tm_min);
+		}
+		
+	}
+	else
+	{
+		sprintf(print_temp,"NoI2C");
+	}
+	
+
+
+	
+	
+	uint8_t indicator = activity_indicator % 4;
+	switch (indicator)
+	{
+		case 0:
+		strcat(print_temp,"|");
+		break;
+		case 1:
+		strcat(print_temp,"/");
+		break;
+		case 2:
+		strcat(print_temp,"-");
+		break;
+		case 3:
+		strcat(print_temp,"\\");
+		break;
+	}
+	
+	
+	LCD_String(print_temp, 0, 5);
+	
+	activity_indicator++;
+	
+	if (ex_mode == online)
+	{
+		
+		paint_info_line(NetStat[0],0);
+	}
+	else
+	{
+		paint_info_line(NetStat[NetStatIndex],0);
 	}
 	
 	
@@ -763,8 +984,8 @@ void Temp_Press_CorrectedVolume(void)
 
 	if(!CHECK_ERROR(TEMPPRESS_ERROR) && connected.TWI){ // only updated when BMP is connected
 		
-		Temperature_value = BMP_Temperature;
-		Pressure_value =  BMP_Pressure/10;///100000; // conversion from Pa to mbar
+		options.Temperature_value = BMP_Temperature;
+		options.Pressure_value =  BMP_Pressure/10;///100000; // conversion from Pa to mbar
 		
 	}
 	uint32_t Ticks_since_last_TP_Meas;
@@ -810,15 +1031,15 @@ void Temp_Press_CorrectedVolume(void)
 	
 	if (options.T_Compensation_enable && options.p_Compensation_enable)
 	{
-		options.CorrVolume = options.CorrVolume + (uint64_t)((((uint64_t) Volume_Since_Last_TP_Measurement*Pressure_value*options.Temperature_norm))/((options.Pressure_norm*Temperature_value)));
+		options.CorrVolume = options.CorrVolume + (uint64_t)((((uint64_t) Volume_Since_Last_TP_Measurement*options.Pressure_value*options.Temperature_norm))/((options.Pressure_norm*options.Temperature_value)));
 	}
 	else if (options.p_Compensation_enable)
 	{
-		options.CorrVolume = options.CorrVolume + (uint64_t)((((uint64_t) Volume_Since_Last_TP_Measurement*Pressure_value)/options.Pressure_norm));
+		options.CorrVolume = options.CorrVolume + (uint64_t)((((uint64_t) Volume_Since_Last_TP_Measurement*options.Pressure_value)/options.Pressure_norm));
 	}
 	else if (options.T_Compensation_enable)
 	{
-		options.CorrVolume = options.CorrVolume + (uint64_t)(((uint64_t) Volume_Since_Last_TP_Measurement*options.Temperature_norm)/Temperature_value);
+		options.CorrVolume = options.CorrVolume + (uint64_t)(((uint64_t) Volume_Since_Last_TP_Measurement*options.Temperature_norm)/options.Temperature_value);
 	}
 	else
 	{
@@ -831,7 +1052,7 @@ void Temp_Press_CorrectedVolume(void)
 	if (options.CorrVolume < old.CorrVolume) // Checks for overflows.
 	{
 		SET_ERROR(VOLUME_TOO_BIG_ERROR);;
-		LCD_paint_info_line("Overfl",1);
+		paint_info_line("Overfl",1);
 	}
 	
 	old.CorrVolume = options.CorrVolume;
@@ -915,7 +1136,7 @@ void PT_Plausibility(void){
 	{
 		CLEAR_ERROR(I2C_BUS_ERROR);;
 		CLEAR_ERROR(TEMPPRESS_ERROR);;
-		LCD_paint_info_line("P wave",0);
+		paint_info_line("P wave",0);
 		_delay_ms(500);
 		return;
 	}
@@ -927,7 +1148,7 @@ void PT_Plausibility(void){
 	{
 		CLEAR_ERROR(I2C_BUS_ERROR);;
 		CLEAR_ERROR(TEMPPRESS_ERROR);;
-		LCD_paint_info_line("T wave",0);
+		paint_info_line("T wave",0);
 		_delay_ms(500);
 		return;
 	}
@@ -992,7 +1213,7 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer)
 	#ifdef ALLOW_LOGIN
 	uint8_t reply_Id = 0;
 	
-	LCD_InitScreen_AddLine("Request Opts",1);
+	Print_add_Line("Request Opts",1);
 	
 	//status_bit_registration_90
 
@@ -1040,7 +1261,7 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer)
 		
 		if(reply_Id != 0xFF)
 		{
-			LCD_InitScreen_AddLine("...data rec.",0);
+			Print_add_Line("...data rec.",0);
 			_delay_ms(1000);
 			//sprintf(print_temp,"%i",frameBuffer[reply_Id].data_len);
 			//LCD_InitScreen_AddLine(print_temp,0);
@@ -1063,8 +1284,8 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer)
 		if(!(--number_trials))
 		{
 			//stop trying and go in error mode; no functionality available from here on
-			LCD_InitScreen_AddLine("Login failed",1);
-			LCD_InitScreen_AddLine("Offline mod.",0);
+			Print_add_Line("Login failed",1);
+			Print_add_Line("Offline mod.",0);
 			_delay_ms(2000);
 			return 0xFF;
 
@@ -1303,7 +1524,7 @@ uint8_t ping_server(void)
 	uint8_t reply_id = xbee_send_request(PING_MSG,buffer,1);
 	if( 0xFF == reply_id)
 	{
-		LCD_paint_info_line("NoPong",0);
+		paint_info_line("NoPong",0);
 		_delay_ms(500);
 		SET_ERROR(NETWORK_ERROR);
 		ex_mode = offline;
@@ -1357,7 +1578,7 @@ uint8_t analyze_Connection(void)
 		
 		CLEAR_ERROR(NO_REPLY_ERROR);
 		if(!ping_server()){
-			LCD_paint_info_line("NoServ",0);
+			paint_info_line("NoServ",0);
 			NetStatIndex = 2;
 			return 0;
 		}
@@ -1372,14 +1593,14 @@ uint8_t analyze_Connection(void)
 	else
 	{
 
-		LCD_paint_info_line("NoNetw",0);
+		paint_info_line("NoNetw",0);
 		NetStatIndex = 1;
 		return 0;
 
 	}
 	#endif
 	#ifdef USE_LAN
-	LCD_paint_info_line("NoServ",0);
+	paint_info_line("NoServ",0);
 	NetStatIndex = 2;
 	return 0;
 	
@@ -1404,7 +1625,7 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	Funtrace_enter(10);
 	_delay_ms(200);
 
-	LCD_paint_info_line(" Op96 ",0);
+	paint_info_line(" Op96 ",0);
 	_delay_ms(3000);
 	
 	struct tm newtime;
@@ -1425,17 +1646,17 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	
 	
 	sprintf(print_temp,"sec:%i",optBuffer[0]);
-	LCD_InitScreen_AddLine(print_temp,1);
+	Print_add_Line(print_temp,1);
 	sprintf(print_temp,"min:%i",optBuffer[1]);
-	LCD_InitScreen_AddLine(print_temp,0);
+	Print_add_Line(print_temp,0);
 	sprintf(print_temp,"hou:%i",optBuffer[2]);
-	LCD_InitScreen_AddLine(print_temp,0);
+	Print_add_Line(print_temp,0);
 	sprintf(print_temp,"day:%i",optBuffer[3]);
-	LCD_InitScreen_AddLine(print_temp,0);
+	Print_add_Line(print_temp,0);
 	sprintf(print_temp,"mon:%i",optBuffer[4]);
-	LCD_InitScreen_AddLine(print_temp,0);
+	Print_add_Line(print_temp,0);
 	sprintf(print_temp,"yea:%i",optBuffer[5]);
-	LCD_InitScreen_AddLine(print_temp,0);
+	Print_add_Line(print_temp,0);
 	_delay_ms(2000);
 	
 	#endif
@@ -1475,19 +1696,19 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	LCD_Clear();
 	if (optholder.T_Compensation_enable)
 	{
-		LCD_InitScreen_AddLine("Tcomp ena",1);
+		Print_add_Line("Tcomp ena",1);
 	}
 	else
 	{
-		LCD_InitScreen_AddLine("Tcomp dis",1);
+		Print_add_Line("Tcomp dis",1);
 	}
 	if (optholder.p_Compensation_enable)
 	{
-		LCD_InitScreen_AddLine("Pcomp ena",0);
+		Print_add_Line("Pcomp ena",0);
 	}
 	else
 	{
-		LCD_InitScreen_AddLine("Pcomp dis",0);
+		Print_add_Line("Pcomp dis",0);
 	}
 	
 	
@@ -1504,7 +1725,7 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 
 	
 	#ifdef DEBUG_OPTIONS
-	LCD_InitScreen_AddLine("Options",1);
+	Print_add_Line("Options",1);
 	_delay_ms(1000);
 	LCD_Value(optholder.t_transmission_max, 0, 0, 0, NULL);
 	_delay_ms(1000);
@@ -1615,7 +1836,7 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	sendbuffer[0] = 0;
 	CLEAR_ERROR(OPTIONS_ERROR);;
 	xbee_send_message(answer_code,sendbuffer,1);
-	LCD_paint_info_line(" Op93 ",0);
+	paint_info_line(" Op93 ",0);
 	_delay_ms(2000);
 
 	if((options.T_Compensation_enable || options.p_Compensation_enable)&& (!connected.BMP)){
@@ -1660,21 +1881,12 @@ int main(void)
 {
 	// Display light control pin
 	DDRD |= (1<<DDD6);			// Set Pin B0 as output
+	
+	
 	init();
 	
-	lcd_init();
-
-	lcd_Cls(white);
-
-	lcd_LOGO(45,60,white);
-	
-	while(1){
-		
-
-	}
 
 
-	//init();
 	
 	
 	//=========================================================================
@@ -1699,15 +1911,15 @@ int main(void)
 	// Display connection is in progress
 	//=========================================================================
 	
-	LCD_InitScreen_AddLine("Network con.",1);
-	LCD_InitScreen_AddLine("in progress",0);
+	Print_add_Line("Network con.",1);
+	Print_add_Line("in progress",0);
 	
 	//=========================================================================
 	// Try to establish connection to the network
 	//=========================================================================
 	#ifdef USE_LAN
-	LCD_InitScreen_AddLine("Pls. activate",0);
-	LCD_InitScreen_AddLine("Coordinator",0);
+	Print_add_Line("Pls. activate",0);
+	Print_add_Line("Coordinator",0);
 
 	_delay_ms(3000);
 	
@@ -1725,8 +1937,8 @@ int main(void)
 		delta_t = count_t_elapsed - time_first_try;
 		if(delta_t > 60)
 		{
-			LCD_InitScreen_AddLine("...failed!",0);
-			LCD_InitScreen_AddLine("offline mode",0);
+			Print_add_Line("...failed!",0);
+			Print_add_Line("offline mode",0);
 			SET_ERROR(INIT_OFFLINE_ERROR);
 			break;			//stop trying on timeout return bad reply
 		}
@@ -1785,7 +1997,7 @@ int main(void)
 			_delay_ms(2000);
 			if(!CHECK_ERROR(NETWORK_ERROR))
 			{
-				LCD_InitScreen_AddLine("...success!",0);
+				Print_add_Line("...success!",0);
 				_delay_ms(2000);
 				//=========================================================================
 				// Device Login
@@ -1805,8 +2017,8 @@ int main(void)
 			}
 			else
 			{ // No stable Connection was reached
-				LCD_InitScreen_AddLine("...failed!",0);
-				LCD_InitScreen_AddLine("offline mode",0);
+				Print_add_Line("...failed!",0);
+				Print_add_Line("offline mode",0);
 				SET_ERROR(INIT_OFFLINE_ERROR);
 			}
 
@@ -1816,8 +2028,8 @@ int main(void)
 	
 	else
 	{
-		LCD_InitScreen_AddLine("...failed!",0);
-		LCD_InitScreen_AddLine("offline mode",0);
+		Print_add_Line("...failed!",0);
+		Print_add_Line("offline mode",0);
 		SET_ERROR(INIT_OFFLINE_ERROR);
 
 	} // end of if(ex_errorCode != ex_errorCode_Offline)
@@ -1834,30 +2046,30 @@ int main(void)
 		while (1)
 		{
 			LCD_Clear();
-			LCD_InitScreen_AddLine("Errors:",1);
+			Print_add_Line("Errors:",1);
 			_delay_ms(2000);
 			//==============================================
 			//Initially Offline
 			if(CHECK_ERROR(INIT_OFFLINE_ERROR)){
-				LCD_InitScreen_AddLine("Init Offline",0);
+				Print_add_Line("Init Offline",0);
 				_delay_ms(2000);
 			}
 			//==============================================
 			//Faulty Options Received
 			if(CHECK_ERROR(OPTIONS_ERROR)){
-				LCD_InitScreen_AddLine("Faulty Opts.",0);
+				Print_add_Line("Faulty Opts.",0);
 				_delay_ms(2000);
 			}
 			//==============================================
 			//BMP or DS3231M error
 			if (CHECK_ERROR(TEMPPRESS_ERROR) )
 			{
-				LCD_InitScreen_AddLine("BMP Error",0);
+				Print_add_Line("BMP Error",0);
 				_delay_ms(2000);
 			}
 			if (CHECK_ERROR(TIMER_ERROR))
 			{
-				LCD_InitScreen_AddLine("DS3231M Err",0);
+				Print_add_Line("DS3231M Err",0);
 				_delay_ms(2000);
 			}
 		}
@@ -1888,7 +2100,7 @@ int main(void)
 			// send Measurement Data to Server
 			if( 0xFF ==xbee_send_request(MEAS_MSG,sendbuffer,MEASUREMENT_MESSAGE_LENGTH))
 			{
-				LCD_paint_info_line("No Ack",0);
+				paint_info_line("No Ack",0);
 				_delay_ms(500);
 				SET_ERROR(NETWORK_ERROR);
 				ex_mode = offline;
@@ -1906,7 +2118,7 @@ int main(void)
 		delta.Volume_since_last_send = 0;
 		
 		// Reset for delta_P calculation
-		last.Pressure_on_send = Pressure_value;
+		last.Pressure_on_send = options.Pressure_value;
 		
 		// Reset for time since last sent i.e. delta_t_send
 		last.time_send = count_t_elapsed;
@@ -1956,7 +2168,7 @@ int main(void)
 				if (!BMP_Connected()){
 					connected.BMP = 1;
 					connected.TWI = 1;
-					init_BMP(&LCD_paint_info_line);
+					init_BMP(&paint_info_line);
 				}
 			}
 			
@@ -1974,7 +2186,7 @@ int main(void)
 					
 					
 					// Quick Bus recovery to recover from short disturbances, the Server was notified regardless
-					LCD_paint_info_line("clrI2C",1);
+					paint_info_line("clrI2C",1);
 					uint8_t i2cState = I2C_ClearBus();
 					
 					
@@ -2020,13 +2232,13 @@ int main(void)
 		
 		
 		//Avoid Overflow when subtracting
-		if(Pressure_value > last.Pressure_on_send)
+		if(options.Pressure_value > last.Pressure_on_send)
 		{
-			delta.Pressure_since_last_send = Pressure_value - last.Pressure_on_send;
+			delta.Pressure_since_last_send = options.Pressure_value - last.Pressure_on_send;
 		}
 		else
 		{
-			delta.Pressure_since_last_send = last.Pressure_on_send -Pressure_value;
+			delta.Pressure_since_last_send = last.Pressure_on_send -options.Pressure_value;
 		}
 		
 		
@@ -2058,7 +2270,7 @@ int main(void)
 				// send Measurement Data to Server
 				if( 0xFF ==xbee_send_request(MEAS_MSG,sendbuffer,MEASUREMENT_MESSAGE_LENGTH))
 				{
-					LCD_paint_info_line("No Ack",0);
+					paint_info_line("No Ack",0);
 					_delay_ms(500);
 					SET_ERROR(NETWORK_ERROR);
 					ex_mode = offline;
@@ -2070,7 +2282,7 @@ int main(void)
 			delta.Volume_since_last_send = 0;
 			
 			// Reset for delta_P calculation
-			last.Pressure_on_send = Pressure_value;
+			last.Pressure_on_send = options.Pressure_value;
 			
 			// Reset for time since last sent i.e. delta_t_send
 			last.time_send = count_t_elapsed;
@@ -2236,7 +2448,7 @@ int main(void)
 					CLEAR_ERROR(NETWORK_ERROR);
 					CLEAR_ERROR(NO_REPLY_ERROR);
 					if(!ping_server()){
-						LCD_paint_info_line("NoServ",0);
+						paint_info_line("NoServ",0);
 						NetStatIndex = 2;
 						
 					}
@@ -2251,7 +2463,7 @@ int main(void)
 				else
 				{
 
-					LCD_paint_info_line("NoNetw",0);
+					paint_info_line("NoNetw",0);
 					NetStatIndex = 1;
 					
 
@@ -2274,9 +2486,9 @@ int main(void)
 						_delay_ms(2000);
 						if (numberMeasBuff > 0)
 						{
-							LCD_InitScreen_AddLine("Sending Old",1);
-							LCD_InitScreen_AddLine("Datasets",0);
-							LCD_InitScreen_AddLine("Remaining:",0);
+							Print_add_Line("Sending Old",1);
+							Print_add_Line("Datasets",0);
+							Print_add_Line("Remaining:",0);
 							while (!CHECK_ERROR(NETWORK_ERROR) && ((numberMeasBuff) > 0))
 							{
 								sprintf(print_temp,"%03d",numberMeasBuff);
@@ -2284,7 +2496,7 @@ int main(void)
 								memcpy(sendbuffer,measBuffer[firstMeasBuff].data,MEASUREMENT_MESSAGE_LENGTH);
 								if( xbee_send_request(MEAS_MSG,sendbuffer, MEASUREMENT_MESSAGE_LENGTH) == 0xFF  )
 								{//=========================
-									LCD_paint_info_line("No Ack",0);
+									paint_info_line("No Ack",0);
 									_delay_ms(500);
 									SET_ERROR(NETWORK_ERROR);
 									ex_mode = offline;

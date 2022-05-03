@@ -52,6 +52,18 @@
 
 
 
+InitScreenType InitScreen_ili = {
+	.ForeColor = ERR,
+	.BackColor = BGC,
+	.MaxNoOfLines = IAdd_Line_Max_Lines,
+	.NextLine = 1,
+	.LineFeed = IAdd_Line_LineFeed,
+	.FontNr = 1,
+	.XScale = 1,
+.YScale = 1};
+
+
+
 
 
 
@@ -89,7 +101,7 @@ struct Logo
 
 
 struct Logo HZB_logo = {.w = 160,.h = 56, .data_len = 1120,.bytes_per_line = 20,.h_Blue = 37};
-	
+
 extern const uint8_t HZB_LOGO_DISP_3000[] PROGMEM;
 
 
@@ -448,6 +460,54 @@ void LCD_vline(unsigned int x0, unsigned int y0, unsigned int length, unsigned i
 void LCD_Draw_Cross(uint16_t x0,uint16_t y0,uint16_t x1,uint16_t y1){
 	LCD_Draw(x0,y0,x1,y1,0,red);
 	LCD_Draw(x0,y1,x1,y0,0,red);
+}
+
+//=========================================================================
+// Init screen with messages appearing one under the other
+//=========================================================================
+
+// Print line of InitScreen
+// if FirstLine is 1 clear page and start with first line
+void InitScreen_AddLine_ili(const char* Text, const char FirstLine)
+{
+	if (FirstLine == 1)
+	{
+		InitScreen_ili.NextLine = 1;
+	}
+	if (InitScreen_ili.NextLine == 1) LCD_Cls(InitScreen_ili.BackColor);  // Clear Screen, before first line is written
+
+	if (FirstLine == 2)
+	{
+		--InitScreen_ili.NextLine;
+		LCD_Print("                     ", X_IA_2, 30 + InitScreen_ili.NextLine * InitScreen_ili.LineFeed, InitScreen_ili.FontNr, InitScreen_ili.XScale, InitScreen_ili.YScale, InitScreen_ili.ForeColor, InitScreen_ili.BackColor);
+	}
+
+	
+	LCD_Print(Text, X_IA_2,30 + InitScreen_ili.NextLine * InitScreen_ili.LineFeed, InitScreen_ili.FontNr, InitScreen_ili.XScale, InitScreen_ili.YScale, InitScreen_ili.ForeColor, InitScreen_ili.BackColor);
+	++InitScreen_ili.NextLine;
+	if (InitScreen_ili.NextLine > InitScreen_ili.MaxNoOfLines)
+	{
+		InitScreen_ili.NextLine = 1;
+		_delay_ms(1000);		  // wait until next page is displayed
+	}
+	_delay_ms(500);
+
+}
+
+void setInitScreen_ili(uint16_t fore, uint16_t back, uint8_t nextLine, uint8_t FontNr, uint8_t XScale, uint8_t YScale){
+	InitScreen_ili.ForeColor = fore;
+	InitScreen_ili.BackColor = back;
+	InitScreen_ili.NextLine = nextLine;
+	InitScreen_ili.FontNr = FontNr;
+	InitScreen_ili.XScale = XScale;
+	InitScreen_ili.YScale = YScale;
+}
+
+
+void paint_info_line_ili(char *line, _Bool update)
+{
+	if (!update) LCD_Print("                      ",  X_PIL_2, Y_PIL_90, 1, 1, 1, FGC, BGC);  // clears line (not necessary if in update mode)
+	LCD_Print(line,  X_PIL_2, Y_PIL_90, 1, 1, 1, ERR, BGC);
 }
 
 

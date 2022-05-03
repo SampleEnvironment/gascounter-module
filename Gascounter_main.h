@@ -186,6 +186,8 @@ typedef struct{
 	uint8_t p_Compensation_enable;  /**< @brief Pressure-Compensation Boolean 1 = ON; 0 = OFF */
 	uint16_t Pressure_norm;			/**< @brief Normal Pressure usually 1033.3mbar (in 0.1mbar) */
 	uint8_t Ping_Intervall;		/**< @brief Time between Pings to the Server (in minutes) */
+	uint32_t Temperature_value;			/**< @brief Temperature Value that is sent periodically to the server (in 0.1K) */
+	uint32_t Pressure_value;			/**< @brief Pressure Value that is sent periodically to the server (in 0.1mbar) */
 }optType;
 
 

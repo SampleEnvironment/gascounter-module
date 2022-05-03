@@ -195,6 +195,10 @@ void LCD_vline(unsigned int x0, unsigned int y0, unsigned int length, unsigned i
 
 void LCD_Draw_Cross(uint16_t x0,uint16_t y0,uint16_t x1,uint16_t y1);
 
+void InitScreen_AddLine_ili(const char* Text, const char FirstLine);
+void setInitScreen_ili(uint16_t fore, uint16_t back, uint8_t nextLine, uint8_t FontNr, uint8_t XScale, uint8_t YScale);
+void paint_info_line_ili(char *line, _Bool update);
+
 #define THICK   1 /** blablalbadkfjsdlfj */
 #define THIN    0
 

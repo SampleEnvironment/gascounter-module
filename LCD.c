@@ -11,11 +11,21 @@
 
 #include "LCD.h"
 #include "assert.h"
+#include "DispAdapter.h"
 
 
-// Variables for Init_Screen
-uint8_t InitScreenMaxNoOfLines = 6;
-uint8_t InitScreenNextLine = 1;
+InitScreenType InitScreen_old = {
+	.ForeColor = ERR,
+	.BackColor = BGC,
+	.MaxNoOfLines = 6,
+	.NextLine = 1,
+	.LineFeed = 0,
+	.FontNr = 1,
+	.XScale = 1,
+	.YScale = 1
+};
+
+
 
 
 /**
@@ -499,15 +509,15 @@ void LCD_InitScreen_AddLine(char* Text, const char FirstLine)
 {
 	if (FirstLine)
 	{
-		InitScreenNextLine = 1;
+		InitScreen_old.NextLine = 1;
 	}
-	if (InitScreenNextLine == 1) LCD_Clear();  // Clear Screen, before first line is written
+	if (InitScreen_old.NextLine == 1) LCD_Clear();  // Clear Screen, before first line is written
 	
-	LCD_String(Text, 0, InitScreenNextLine-1);
-	++InitScreenNextLine;
-	if (InitScreenNextLine > InitScreenMaxNoOfLines)
+	LCD_String(Text, 0, InitScreen_old.NextLine-1);
+	++InitScreen_old.NextLine;
+	if (InitScreen_old.NextLine > InitScreen_old.MaxNoOfLines)
 	{
-		InitScreenNextLine = 1;
+		InitScreen_old.NextLine = 1;
 		_delay_ms(1000);		  // wait until next page is displayed
 	}
 	_delay_ms(300);
