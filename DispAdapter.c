@@ -9,6 +9,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <math.h>
 
 #include "DispAdapter.h"
 #include "config.h"
@@ -21,18 +23,7 @@
 
 
 
-MainscreenType MainScreen = {
-	.Value.x = X_LEFT_EDGE,
-	.Value.y = Y_VALUES_START,
-	.Volume.x = X_LEFT_EDGE,
-	.Volume.y = Y_VALUES_START + FONT2_H * 1,
-	.Corr.x = X_LEFT_EDGE,
-	.Corr.y = Y_VALUES_START + FONT2_H * 2,
-	.Temp.x = X_LEFT_EDGE,
-	.Temp.y = Y_VALUES_START + FONT2_H * 3,
-	.Press.x = X_LEFT_EDGE,
-	.Press.y = Y_VALUES_START + FONT2_H * 4,
-};
+
 
 
 void lcd_init(void){
@@ -141,61 +132,38 @@ void paint_info_line(char * line, _Bool update){
 }
 
 
-void paint_value(char* text,uint8_t update,char* unit){
-	if (update)
-	{
-		lcd_Print("               ",MainScreen.Value.x + DESCRUPTOR_LEN * FONT2_W,MainScreen.Value.y,2,1,1,FGC,BGC);
-	}
-	lcd_Print(text,MainScreen.Value.x + DESCRUPTOR_LEN * FONT2_W,MainScreen.Value.y,2,1,1,FGC,BGC);
-	
-	lcd_Print(unit,HALF_SPACE_WIDTH_FONT_2 + MainScreen.Value.x + (DESCRUPTOR_LEN+strlen(text)) * FONT2_W, MainScreen.Value.y,2,1,1,FGC,BGC);
-}
-void paint_volume(char* text,uint8_t update,char* unit){
-	if (update)
-	{
-		lcd_Print("               ",MainScreen.Volume.x + DESCRUPTOR_LEN * FONT2_W,MainScreen.Volume.y,2,1,1,FGC,BGC);
-	}
-	lcd_Print(text,MainScreen.Volume.x + DESCRUPTOR_LEN * FONT2_W,MainScreen.Volume.y,2,1,1,FGC,BGC);
-	
-	lcd_Print(unit,HALF_SPACE_WIDTH_FONT_2 + MainScreen.Volume.x + (DESCRUPTOR_LEN+strlen(text)) * FONT2_W, MainScreen.Volume.y,2,1,1,FGC,BGC);
-	
-}
 
-void paint_corr(char* text,uint8_t update,char* unit){
-	if (update)
-	{
-		lcd_Print("               ",MainScreen.Corr.x + DESCRUPTOR_LEN * FONT2_W,MainScreen.Corr.y,2,1,1,FGC,BGC);
-	}
-	lcd_Print(text,MainScreen.Corr.x + DESCRUPTOR_LEN * FONT2_W,MainScreen.Corr.y,2,1,1,FGC,BGC);
-	
-	lcd_Print(unit,HALF_SPACE_WIDTH_FONT_2 + MainScreen.Corr.x + (DESCRUPTOR_LEN+strlen(text)) * FONT2_W, MainScreen.Corr.y,2,1,1,FGC,BGC);
-}
-void paint_temp(char* text,uint8_t update,char* unit){
-	if (update)
-	{
-		lcd_Print("               ",MainScreen.Temp.x + DESCRUPTOR_LEN * FONT2_W,MainScreen.Temp.y,2,1,1,FGC,BGC);
-	}
-	lcd_Print(text,MainScreen.Temp.x + DESCRUPTOR_LEN * FONT2_W,MainScreen.Temp.y,2,1,1,FGC,BGC);
-	
-	lcd_Print(unit,HALF_SPACE_WIDTH_FONT_2 + MainScreen.Temp.x + (DESCRUPTOR_LEN+strlen(text)) * FONT2_W, MainScreen.Temp.y,2,1,1,FGC,BGC);
-}
 
-void paint_press(char* text,uint8_t update,char* unit){
-	if (update)
-	{
-		lcd_Print("               ",MainScreen.Press.x + DESCRUPTOR_LEN * FONT2_W,MainScreen.Press.y,2,1,1,FGC,BGC);
-	}
-	lcd_Print(text,MainScreen.Press.x + DESCRUPTOR_LEN * FONT2_W,MainScreen.Press.y,2,1,1,FGC,BGC);
 
-	lcd_Print(unit,HALF_SPACE_WIDTH_FONT_2 + MainScreen.Press.x + (DESCRUPTOR_LEN+strlen(text)) * FONT2_W, MainScreen.Press.y,2,1,1,FGC,BGC);
+
+void paint_string_row(char *text,ROW_NAME row,uint8_t update,char* unit,uint16_t color){
+		if (update)
+		{
+			lcd_Print("               ",X_LEFT_EDGE + DESCRUPTOR_LEN * FONT2_W,Y_VALUES_START + FONT2_H * row,2,1,1,color,BGC);
+		}
+		lcd_Print(text,X_LEFT_EDGE + DESCRUPTOR_LEN * FONT2_W,Y_VALUES_START + FONT2_H * row,2,1,1,color,BGC);
+
+		lcd_Print(unit,HALF_SPACE_WIDTH_FONT_2 + X_LEFT_EDGE + (DESCRUPTOR_LEN+strlen(text)) * FONT2_W, Y_VALUES_START + FONT2_H * row,2,1,1,color,BGC);
 }
 
 void paint_Main(void){
-	lcd_Print("Val:",MainScreen.Value.x ,MainScreen.Value.y,2,1,1,FGC,BGC);
-	lcd_Print("Vol:",MainScreen.Volume.x ,MainScreen.Volume.y,2,1,1,FGC,BGC);
-	lcd_Print("Cor:",MainScreen.Corr.x ,MainScreen.Corr.y,2,1,1,FGC,BGC);
-	lcd_Print("Tmp:",MainScreen.Temp.x ,MainScreen.Temp.y,2,1,1,FGC,BGC);
-	lcd_Print("Prs:",MainScreen.Press.x ,MainScreen.Press.y,2,1,1,FGC,BGC);
+	lcd_Print("Val:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * VALUE  ,2,1,1,FGC,BGC);
+	lcd_Print("Vol:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * VOLUME ,2,1,1,FGC,BGC);
+	lcd_Print("Cor:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * CORRVOL,2,1,1,FGC,BGC);
+	lcd_Print("Tmp:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * TEMP   ,2,1,1,FGC,BGC);
+	lcd_Print("Prs:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * PRESS  ,2,1,1,FGC,BGC);
 } 
 
+
+
+void paint_Value(uint64_t val,ROW_NAME row,uint8_t precision,char* unit){
+	char numberbuffer[30];
+	dtostrf(((double)val)/pow(10,precision),3,precision,numberbuffer);
+	
+	paint_string_row(numberbuffer,row,1,unit,FGC);
+}
+
+void paint_Error(char* text, ROW_NAME row){
+	paint_string_row(text,row,1,"",red);
+}
 

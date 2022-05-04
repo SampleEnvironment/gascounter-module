@@ -488,7 +488,7 @@ void init(void)
 	
 
 	#ifdef ili9341
-	setInitScreen(white,white,6,1,1,1);
+	setInitScreen(black,white,6,1,1,1);
 	Print_add_Line("HZB Gascount",0);
 	#endif
 	
@@ -589,9 +589,7 @@ void init(void)
 	xbee_hardware_version();
 	Print_add_Line("Init done",0);
 	
-	while (1)
-	{
-	}
+
 	
 }
 
@@ -665,13 +663,13 @@ void displayTemPreVol(void){
 	
 	if ( CHECK_ERROR(TEMPPRESS_ERROR))
 	{
-		paint_temp("TEMP ERR",1,"");
+		paint_Error("TEMP ERR",TEMP);
 	}
 	if (CHECK_ERROR(TEMPPRESS_ERROR))
 	{
-		paint_press("PRESS ERR",1,"");
+		paint_Error("PRESS ERR",PRESS);
 		if (options.T_Compensation_enable){
-			paint_temp("TEMP ERR",1,"");
+			paint_Error("TEMP ERR",TEMP);
 		}
 
 	}
@@ -679,12 +677,12 @@ void displayTemPreVol(void){
 	// TEMPERATURE
 	if (!(options.T_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
 	{
-		LCD_Clear_row_from_column(2, 3);
-		LCD_Value((int32_t) options.Temperature_value - 2732, 1, 2, 3, "°C");
+
+		paint_Value( options.Temperature_value - 2732,TEMP, 1, "°C");
 	}
 	else{
-		LCD_Clear_row_from_column(2, 3);
-		LCD_String("TEMP ERR",3,3);
+
+		paint_Error("TEMP ERR",TEMP);
 	}
 	
 	
@@ -692,20 +690,18 @@ void displayTemPreVol(void){
 	if(!(options.p_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
 	{
 		LCD_Clear_row_from_column(2, 4);
-		LCD_Value(options.Pressure_value, 1, 2, 4, "mbar");
+		paint_Value(options.Pressure_value,PRESS, 1, "mbar");
 	}
 	else{
 		LCD_Clear_row_from_column(2, 3);
-		LCD_String("PRESS ERR",3,4);
+		paint_Error("PRESS ERR",PRESS);
 	}
 	
 
 	if (!connected.BMP &&  connected.BMP_on_Startup)
 	{
-		LCD_Clear_row_from_column(2, 3);
-		LCD_String("BMP Sensor",2,3);
-		LCD_Clear_row_from_column(2, 4);
-		LCD_String("Error",2,4);
+		paint_Error("BMP Sensor",TEMP);
+		paint_Error("Error",PRESSURE);
 		
 		
 	}
@@ -715,30 +711,24 @@ void displayTemPreVol(void){
 	
 	//VOLUME
 	#ifndef FUNCTION_TRACE
-	LCD_Clear_row_from_column(3, 0);
-	LCD_Value(options.Value / options.step_Volume, position_volume_dot_point, 2, 0, "m³");
+
+	paint_Value(options.Value / options.step_Volume,VALUE, position_volume_dot_point,"m³");
 	#endif
 	
-	LCD_Clear_row_from_column(3, 1);
-	LCD_Value(options.Volume / options.step_Volume, position_volume_dot_point, 2, 1, "m³");
+
+	paint_Value(options.Volume / options.step_Volume,VOLUME, position_volume_dot_point, "m³");
 	
-	LCD_Clear_row_from_column(3, 2);
-	LCD_Value(options.CorrVolume / options.step_Volume, position_volume_dot_point, 2, 2, "m³");
+
+	paint_Value(options.CorrVolume / options.step_Volume, CORRVOL, position_volume_dot_point,"m³");
+	
 	
 	DS3231M_read_time();
 	
 	
 	if (connected.TWI && connected.DS3231M)
 	{
-		if ((Time.tm_hour < 10))
-		{ if (Time.tm_min < 10) sprintf(print_temp,"0%i:0%i", Time.tm_hour, Time.tm_min);
-			else sprintf(print_temp,"0%i:%i", Time.tm_hour, Time.tm_min);
-		}
-		if (!(Time.tm_hour < 10))
-		{ if (Time.tm_min < 10) sprintf(print_temp,"%i:0%i", Time.tm_hour, Time.tm_min);
-			else sprintf(print_temp,"%i:%i", Time.tm_hour, Time.tm_min);
-		}
-		
+		sprintf(print_temp,"%02i:%02i", Time.tm_hour, Time.tm_min);
+
 	}
 	else
 	{
@@ -767,7 +757,7 @@ void displayTemPreVol(void){
 	}
 	
 	
-	LCD_String(print_temp, 0, 5);
+	paint_string_row(print_temp,INFO,0,"", green);
 	
 	activity_indicator++;
 	
@@ -782,14 +772,7 @@ void displayTemPreVol(void){
 	}
 	
 	
-	#ifndef FUNCTION_TRACE
-	LCD_String("A:", 0, 0); // Value
-	#endif
-	
-	LCD_String("V:", 0, 1); // Volume
-	LCD_String("C:", 0, 2); // CorrVolume
-	LCD_String("T:", 0, 3); // Temperature
-	LCD_String("P:", 0, 4); // Pressure
+	paint_Main();
 	
 	
 	#endif

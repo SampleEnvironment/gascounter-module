@@ -36,6 +36,14 @@
 #define HZB_Blue        0b0000001011010011
 #define HZB_Cyan        0b0000010011111100
 
+typedef enum {
+	VALUE,
+	VOLUME,
+	CORRVOL,
+	TEMP,
+	PRESS,
+	INFO
+}ROW_NAME;
 
 typedef struct {
 	uint16_t ForeColor;
@@ -48,18 +56,9 @@ typedef struct {
 	uint8_t  YScale;
 }InitScreenType;
 
-typedef struct{
-	uint16_t x;
-	uint16_t y;	
-}PointType;
 
-typedef struct {
-	PointType Value;
-	PointType Volume;
-	PointType Corr;
-	PointType Temp;
-	PointType Press;		
-}MainscreenType;
+
+
 
 void lcd_init(void);
 void lcd_Print(const char* Text, uint16_t X, uint16_t Y, unsigned char FontNr, unsigned char XScale, unsigned char YScale, unsigned int ForeColor, unsigned int BackColor);
@@ -75,10 +74,8 @@ void lcd_Draw_Cross(uint16_t x0,uint16_t y0,uint16_t x1,uint16_t y1);
 void Print_add_Line(char* Text,uint8_t first_line );
 void setInitScreen(uint16_t fore, uint16_t back, uint8_t nextLine, uint8_t FontNr, uint8_t XScale, uint8_t YScale);
 void paint_info_line(char * line, _Bool update);
-void paint_press(char* text,uint8_t update,char* unit);
-void paint_temp(char* text,uint8_t update,char* unit);
-void paint_value(char* text,uint8_t update,char* unit);
-void paint_volume(char* text,uint8_t update,char* unit);
-void paint_corr(char* text,uint8_t update,char* unit);
-
+void paint_string_row(char *text,ROW_NAME row,uint8_t update,char* unit,uint16_t color);
+void paint_Value(uint64_t val,ROW_NAME row,uint8_t precision,char* unit);
+void paint_Error(char* text, ROW_NAME row);
+void paint_Main(void);
 #endif /* DISPADAPTER_H_ */
