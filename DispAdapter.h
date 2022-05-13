@@ -9,6 +9,8 @@
 #ifndef DISPADAPTER_H_
 #define DISPADAPTER_H_
 
+#include "disp/ili9341_driver.h"
+
 // COLORS
 #define bright_blue		0b1101111011011111	//Predefined colors will make programmers life easier
 #define blue			0b0000000000011111
@@ -37,12 +39,13 @@
 #define HZB_Cyan        0b0000010011111100
 
 typedef enum {
+	INFO,
 	VALUE,
 	VOLUME,
 	CORRVOL,
 	TEMP,
 	PRESS,
-	INFO
+	CONN
 }ROW_NAME;
 
 typedef struct {
@@ -56,6 +59,7 @@ typedef struct {
 	uint8_t  YScale;
 }InitScreenType;
 
+extern EWindowOrientation Orientation;
 
 
 
@@ -75,7 +79,10 @@ void Print_add_Line(char* Text,uint8_t first_line );
 void setInitScreen(uint16_t fore, uint16_t back, uint8_t nextLine, uint8_t FontNr, uint8_t XScale, uint8_t YScale);
 void paint_info_line(char * line, _Bool update);
 void paint_string_row(char *text,ROW_NAME row,uint8_t update,char* unit,uint16_t color);
-void paint_Value(uint64_t val,ROW_NAME row,uint8_t precision,char* unit);
+void paint_Value(uint64_t val,ROW_NAME row,uint8_t precision, uint8_t min_width,char* unit);
 void paint_Error(char* text, ROW_NAME row);
 void paint_Main(void);
+void InitScreen_AddLine_ili(const char* Text, const char FirstLine);
+void setInitScreen_ili(uint16_t fore, uint16_t back, uint8_t nextLine, uint8_t FontNr, uint8_t XScale, uint8_t YScale);
+void paint_info_line_ili(char *line, _Bool update);
 #endif /* DISPADAPTER_H_ */

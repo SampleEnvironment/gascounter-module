@@ -95,6 +95,6 @@
 //paint_info_line()
 //======================================================================================
 #define X_PIL_2 20		 // Info line Directly above Progress-Bar and to the right of
-#define Y_PIL_90 50 // Buttons/edge
+#define Y_PIL_90 290 // Buttons/edge
 
 

@@ -370,7 +370,7 @@ void init_interrupts(void);
 void displayTemPreVol(void);
 void Temp_Press_CorrectedVolume(void);
 void PT_Plausibility(void);
-void reset_display(void);
+void reset_display(uint8_t clear);
 void Funtrace_enter(uint8_t Function_ID);
 uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer);
 void execute_server_CMDS(uint8_t reply_id);

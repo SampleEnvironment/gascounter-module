@@ -11,7 +11,7 @@
 
 
 // Display Version:
-#define ili9341
+//#define ili9341
 //#define old_LCD 
 
 

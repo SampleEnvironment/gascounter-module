@@ -41,7 +41,12 @@
 #include "status.h"
 #include "DS3231M.h"
 #include "BMP085.h"
-#include "LCD.h"
+
+
+#ifdef GCM_old_disp
+#include "disp/gcm_old_lcd_driver.h"
+#endif
+
 #include "I2C_utilities.h"
 #include "module_globals.h"
 #include "adwandler.h"
@@ -178,7 +183,7 @@ const uint16_t reset_display_Interval = 60 * 60;
 *
 * Time between Pressure-Temperature-Measurements (in s)
 */
-const uint8_t Measure_Interval = 1;
+const uint8_t Measure_Interval = 5;
 
 
 /************************************************************************/
@@ -213,7 +218,7 @@ uint32_t BMP_Temperature_old = 0;
 oldType old = {.Value = DEF_Value, .Volume = DEF_Volume, .CorrVolume=DEF_CorrVolume};
 
 
-char print_temp[15] = "";/**< @brief   Char Array for displaying Strings*/
+char print_temp[25] = "";/**< @brief   Char Array for displaying Strings*/
 
 uint8_t position_volume_dot_point = 2;	/**< @brief  The position of the dot point of Volume, Value and CorrVolume. */
 
@@ -492,7 +497,7 @@ void init(void)
 	Print_add_Line("HZB Gascount",0);
 	#endif
 	
-	#ifdef old_LCD
+	#ifdef GCM_old_disp
 	Print_add_Line("HZB Gascount",1);
 	#endif
 
@@ -514,21 +519,21 @@ void init(void)
 	Print_add_Line("Init start",0);
 	#endif
 	
-	#ifdef old_LCD
+	#ifdef GCM_old_disp
 	_delay_ms(2000); // the delay is for the xbee to start when the system is plugged in
 	Print_add_Line("Init start",1);
 	#endif
 
 
-	Print_add_Line("Init ports",0);
+	Print_add_Line("Init ports",2);
 	
-	Print_add_Line("Init timer",0);
+	Print_add_Line("Init timer",2);
 	init_timer();
-	Print_add_Line("Init interr.",0);
+	Print_add_Line("Init interr.",2);
 	init_interrupts();
-	Print_add_Line("Init usart",0);
+	Print_add_Line("Init usart",2);
 	usart_init(39);
-	Print_add_Line("Init I2C",0);
+	Print_add_Line("Init I2C",2);
 	i2c_init();
 
 
@@ -547,18 +552,29 @@ void init(void)
 
 
 	// Timer
-	Print_add_Line("Init Clock",0);
+	Print_add_Line("Init Clock",2);
 
 	if (init_DS3231M(&paint_info_line) == 0) // trying to connect with DS3231M (time)
 	{
 		connected.DS3231M = 1;
+		#ifdef ili9341
+		Print_add_Line("Init Clock  ...success",2);
+		#endif
+		#ifdef GCM_old_disp
 		Print_add_Line("...success",0);
+		#endif
+
 	}
 	else
 	{
 		connected.DS3231M = 0;
 		SET_ERROR(TIMER_ERROR);
+		#ifdef ili9341
+		Print_add_Line("Init Clock  ...error",2);
+		#endif
+		#ifdef GCM_old_disp
 		Print_add_Line("...error",0);
+		#endif
 	}
 
 	// Pressure and Temperature Sensor
@@ -568,7 +584,12 @@ void init(void)
 	{
 		connected.BMP = 1;
 		connected.BMP_on_Startup = 1;
+		#ifdef ili9341
+		Print_add_Line("Init Press  ...success",2);
+		#endif
+		#ifdef GCM_old_disp
 		Print_add_Line("...success",0);
+		#endif
 		CLEAR_ERROR(TEMPPRESS_ERROR);;
 	}
 	else
@@ -588,6 +609,8 @@ void init(void)
 	
 	xbee_hardware_version();
 	Print_add_Line("Init done",0);
+	
+
 	
 
 	
@@ -678,7 +701,7 @@ void displayTemPreVol(void){
 	if (!(options.T_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
 	{
 
-		paint_Value( options.Temperature_value - 2732,TEMP, 1, "°C");
+		paint_Value( options.Temperature_value - 2732,TEMP, 1, 4, "°C");
 	}
 	else{
 
@@ -690,7 +713,7 @@ void displayTemPreVol(void){
 	if(!(options.p_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
 	{
 		LCD_Clear_row_from_column(2, 4);
-		paint_Value(options.Pressure_value,PRESS, 1, "mbar");
+		paint_Value(options.Pressure_value,PRESS, 1, 6, "mbar");
 	}
 	else{
 		LCD_Clear_row_from_column(2, 3);
@@ -710,16 +733,16 @@ void displayTemPreVol(void){
 
 	
 	//VOLUME
-	#ifndef FUNCTION_TRACE
 
-	paint_Value(options.Value / options.step_Volume,VALUE, position_volume_dot_point,"m³");
-	#endif
+
+	paint_Value(options.Value / options.step_Volume,VALUE, position_volume_dot_point, 1,"m³");
+
 	
 
-	paint_Value(options.Volume / options.step_Volume,VOLUME, position_volume_dot_point, "m³");
+	paint_Value(options.Volume / options.step_Volume,VOLUME, position_volume_dot_point, 1, "m³");
 	
 
-	paint_Value(options.CorrVolume / options.step_Volume, CORRVOL, position_volume_dot_point,"m³");
+	paint_Value(options.CorrVolume / options.step_Volume, CORRVOL, position_volume_dot_point, 1,"m³");
 	
 	
 	DS3231M_read_time();
@@ -736,7 +759,7 @@ void displayTemPreVol(void){
 	}
 	
 
-
+	
 	
 	
 	uint8_t indicator = activity_indicator % 4;
@@ -756,28 +779,44 @@ void displayTemPreVol(void){
 		break;
 	}
 	
+	char versionStr[10];
+	sprintf(versionStr,"v%i.%i",version.Branch_id,version.Fw_version);
+	
+	strcat(print_temp,versionStr);
+	
 	
 	paint_string_row(print_temp,INFO,0,"", green);
 	
-	activity_indicator++;
 	
+
 	if (ex_mode == online)
 	{
+		sprintf(print_temp,"Online");
 		
-		paint_info_line(NetStat[0],0);
 	}
 	else
 	{
-		paint_info_line(NetStat[NetStatIndex],0);
+		sprintf(print_temp,"%s",NetStat[NetStatIndex]);
 	}
+	xbee_coordIdentifier();
+	strcat(print_temp,xbee_get_coordID());
+	
+	paint_string_row(print_temp,CONN,0,"", green);
 	
 	
-	paint_Main();
+	activity_indicator++;
+	
+
 	
 	
 	#endif
+	
+	
+	
+	
+	
 
-	#ifdef old_LCD
+	#ifdef GCM_old_disp
 	/*
 	LCD_Clear_row_from_column(0,0);
 
@@ -1147,11 +1186,21 @@ void PT_Plausibility(void){
 *
 * @return void
 */
-void reset_display(void){
+void reset_display(uint8_t clear)
+{
+
+
+
 	FUNCTION_TRACE
 	Funtrace_enter(6);
-	LCD_Clear();
-	_delay_ms(100);
+	
+	#ifdef GCM_old_disp
+	if (clear)
+	{
+		LCD_Clear();
+		_delay_ms(100);
+	}
+
 	
 
 	LCD_String("A:", 0, 0); // Value
@@ -1162,11 +1211,6 @@ void reset_display(void){
 
 	
 	LCD_Clear_row_from_column(3, 0);
-	
-	//sprintf(print_temp,"FW: v%i.%i",Branch_id,Fw_version);
-	//LCD_String(print_temp, 0, 0);
-
-	
 	LCD_Value(options.Value / options.step_Volume, position_volume_dot_point, 2, 0, "m³");
 	
 	LCD_Clear_row_from_column(3, 1);
@@ -1174,6 +1218,18 @@ void reset_display(void){
 	
 	LCD_Clear_row_from_column(3, 2);
 	LCD_Value(options.CorrVolume / options.step_Volume, position_volume_dot_point, 2, 2, "m³");
+	#endif
+	
+	#ifdef ili9341
+	
+	if (clear)
+	{
+		lcd_Cls(BGC);
+	}
+
+	paint_Main();
+	#endif
+
 
 }
 
@@ -1196,7 +1252,13 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer)
 	#ifdef ALLOW_LOGIN
 	uint8_t reply_Id = 0;
 	
+	#ifdef ili9341
+	Print_add_Line("Request Opts",0);
+	#endif
+	#ifdef GCM_old_disp
 	Print_add_Line("Request Opts",1);
+	#endif
+
 	
 	//status_bit_registration_90
 
@@ -1244,7 +1306,14 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer)
 		
 		if(reply_Id != 0xFF)
 		{
+			#ifdef ili9341
+			Print_add_Line("Request Opts ...data rec.",2);
+			#endif
+			#ifdef GCM_old_disp
 			Print_add_Line("...data rec.",0);
+			#endif
+			
+
 			_delay_ms(1000);
 			//sprintf(print_temp,"%i",frameBuffer[reply_Id].data_len);
 			//LCD_InitScreen_AddLine(print_temp,0);
@@ -1253,8 +1322,18 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer)
 				return reply_Id;	//good options
 			}
 			else {
+				
+				//TODO Fix
 				LCD_Clear();
-				LCD_String("len false",0,0);
+				
+				#ifdef ili9341
+				Print_add_Line("Request Opts len false",1);
+				#endif
+				#ifdef GCM_old_disp
+				Print_add_Line("len false",0,0);
+				#endif
+
+				
 				LCD_Value(frameBuffer[reply_Id].data_len,0,0,1,"num ");
 				_delay_ms(5000);
 				_delay_ms(5000);
@@ -1808,7 +1887,7 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	}
 	
 	#ifdef USE_DISPLAY
-	reset_display();
+	reset_display(1);
 	#endif
 	
 
@@ -1893,9 +1972,17 @@ int main(void)
 	//=========================================================================
 	// Display connection is in progress
 	//=========================================================================
-	
+	#ifdef GCM_old_disp
 	Print_add_Line("Network con.",1);
 	Print_add_Line("in progress",0);
+	
+	#endif
+	
+	#ifdef ili9341
+	Print_add_Line("Network connection",0);
+	Print_add_Line("in progress",0);
+	#endif
+
 	
 	//=========================================================================
 	// Try to establish connection to the network
@@ -1980,7 +2067,13 @@ int main(void)
 			_delay_ms(2000);
 			if(!CHECK_ERROR(NETWORK_ERROR))
 			{
+				#ifdef ili9341
+				Print_add_Line("..success!",2);
+				#endif
+				#ifdef GCM_old_disp
 				Print_add_Line("...success!",0);
+				#endif
+				
 				_delay_ms(2000);
 				//=========================================================================
 				// Device Login
@@ -2059,6 +2152,7 @@ int main(void)
 	}else  // One measure send cycle on startup
 
 	{
+		reset_display(0);
 		//MEASUREMENT BLOCK
 		if (connected.BMP){ // measurement is only done if T OR P compensation is enabled
 			if(BMP_Temp_and_Pressure()){
@@ -2132,7 +2226,7 @@ int main(void)
 		if (delta.t_Display_reset >= reset_display_Interval)  // After this time (in minutes) the display is reset (to avoid display problems after a possible loss of power)
 		{
 			last.time_display_reset = count_t_elapsed;
-			reset_display();
+			reset_display(1);
 			
 
 
@@ -2335,7 +2429,7 @@ int main(void)
 				}
 				
 				_delay_ms(2000);
-				reset_display();
+				reset_display(1);
 				
 			}
 			
@@ -2483,7 +2577,7 @@ int main(void)
 									_delay_ms(500);
 									SET_ERROR(NETWORK_ERROR);
 									ex_mode = offline;
-									reset_display();
+									reset_display(1);
 									break;
 									
 								}
@@ -2503,7 +2597,7 @@ int main(void)
 									
 								}
 							}//while (!CHECK_ERROR(NETWORK_ERROR) && ((numberMeasBuff) > 0))
-							reset_display();
+							reset_display(1);
 						}//if (numberMeasBuff > 0)
 					}// reconnect successful
 				}// try reconnect every Reconnect_after_time
