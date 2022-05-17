@@ -434,7 +434,7 @@ void store_measurement(void)
 	Funtrace_enter(2);
 	// write information to measurement buffer
 	/*
-	LCD_Clear();
+	lcd_Cls(BGC);
 	sprintf(print_temp,"%i.%i.%i",sendbuffer[3],sendbuffer[4],sendbuffer[5]);
 	LCD_String(print_temp,0,1);
 	sprintf(print_temp,"%i:%i:%i  ",sendbuffer[2],sendbuffer[1],sendbuffer[0]);
@@ -460,7 +460,15 @@ void store_measurement(void)
 	if (numberMeasBuff == MEASBUFFER_LENGTH) firstMeasBuff = nextfreeMeasBuff;
 	
 	sprintf(print_temp,"Buff:%03d/%03d",numberMeasBuff,MEASBUFFER_LENGTH);
+	
+	#ifdef ili9341
+	paint_string_row(print_temp,INFO,1,"",orange);
+	#endif
+	#ifdef GCM_old_disp
 	LCD_String(print_temp, 0,0);
+	#endif
+
+
 
 	
 }
@@ -712,11 +720,10 @@ void displayTemPreVol(void){
 	//PRESSURE
 	if(!(options.p_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
 	{
-		LCD_Clear_row_from_column(2, 4);
 		paint_Value(options.Pressure_value,PRESS, 1, 6, "mbar");
 	}
 	else{
-		LCD_Clear_row_from_column(2, 3);
+
 		paint_Error("PRESS ERR",PRESS);
 	}
 	
@@ -785,23 +792,27 @@ void displayTemPreVol(void){
 	strcat(print_temp,versionStr);
 	
 	
-	paint_string_row(print_temp,INFO,0,"", green);
+	paint_string_row(print_temp,INFO,0,"", FGC);
 	
 	
 
 	if (ex_mode == online)
 	{
-		sprintf(print_temp,"Online");
+		paint_string_row(xbee_get_coordID(),CONN,0,"", green);
 		
 	}
 	else
 	{
-		sprintf(print_temp,"%s",NetStat[NetStatIndex]);
+		if(NetStatIndex == 1){
+			paint_string_row(xbee_get_coordID(),CONN,0,"", orange);
+			
+		}
+		if(NetStatIndex == 2){
+			paint_string_row(xbee_get_coordID(),CONN,0,"", red);
+		}
 	}
-	xbee_coordIdentifier();
-	strcat(print_temp,xbee_get_coordID());
-	
-	paint_string_row(print_temp,CONN,0,"", green);
+
+
 	
 	
 	activity_indicator++;
@@ -832,7 +843,7 @@ void displayTemPreVol(void){
 	if ( CHECK_ERROR(TEMPPRESS_ERROR))
 	{
 		/*
-		LCD_Clear();
+		lcd_Cls(BGC);
 		LCD_String("TempComp is",0,0);
 		LCD_String("enabled but",0,1);
 		LCD_String("no conn to",0,2);
@@ -846,7 +857,7 @@ void displayTemPreVol(void){
 	if (CHECK_ERROR(TEMPPRESS_ERROR))
 	{
 		/*
-		LCD_Clear();
+		lcd_Cls(BGC);
 		LCD_String("PressComp is",0,0);
 		LCD_String("enabled but",0,1);
 		LCD_String("no conn to",0,2);
@@ -1025,11 +1036,9 @@ void Temp_Press_CorrectedVolume(void)
 	if (options.Value < old.Value) // Checks for overflows.
 	{
 		
-		SET_ERROR(VOLUME_TOO_BIG_ERROR);;
-		#ifdef USE_DISPLAY
-		LCD_Clear_row_from_column(6, 5);
-		LCD_String("Overfl.", 6, 5);
-		#endif
+		SET_ERROR(VOLUME_TOO_BIG_ERROR);
+		paint_info_line("Overfl",1);
+
 	}
 	
 	old.Value = options.Value;
@@ -1039,11 +1048,7 @@ void Temp_Press_CorrectedVolume(void)
 	if (options.Volume < old.Volume) // Checks for overflows.
 	{
 		SET_ERROR(VOLUME_TOO_BIG_ERROR);;
-		
-		#ifdef USE_DISPLAY
-		LCD_Clear_row_from_column(6, 5);
-		LCD_String("Overfl.", 6, 5);
-		#endif
+		paint_info_line("Overfl",1);
 
 	}
 	
@@ -1197,7 +1202,7 @@ void reset_display(uint8_t clear)
 	#ifdef GCM_old_disp
 	if (clear)
 	{
-		LCD_Clear();
+		lcd_Cls(BGC);
 		_delay_ms(100);
 	}
 
@@ -1224,7 +1229,7 @@ void reset_display(uint8_t clear)
 	
 	if (clear)
 	{
-		lcd_Cls(BGC);
+		lcd_Cls(white);
 	}
 
 	paint_Main();
@@ -1324,17 +1329,19 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer)
 			else {
 				
 				//TODO Fix
-				LCD_Clear();
+				lcd_Cls(BGC);
 				
 				#ifdef ili9341
 				Print_add_Line("Request Opts len false",1);
+				paint_Value(frameBuffer[reply_Id].data_len,VOLUME,1,3,"");
 				#endif
 				#ifdef GCM_old_disp
 				Print_add_Line("len false",0,0);
+				LCD_Value(frameBuffer[reply_Id].data_len,0,0,1,"num ");
 				#endif
 
 				
-				LCD_Value(frameBuffer[reply_Id].data_len,0,0,1,"num ");
+
 				_delay_ms(5000);
 				_delay_ms(5000);
 				return 0xFF;  //bad options
@@ -1460,12 +1467,24 @@ void execute_server_CMDS(uint8_t reply_id){
 		if (frameBuffer[reply_id].data[0] == 0)
 		{
 			eeprom_Fun_Trace.Enable_eeprom_Fun_Trace = false;
+			
+			#ifdef ili9341
+			paint_info_line("FunTrace: OFF",1);
+			#endif
+			#ifdef GCM_old_disp
 			LCD_String("FunTrace:OFF",0,5);
+			#endif
+			
 			_delay_ms(2000);
 		}else
 		{
 			eeprom_Fun_Trace.Enable_eeprom_Fun_Trace = true;
-			LCD_String("FunTrace: ON",0,5);
+			#ifdef ili9341
+			paint_info_line("FunTrace: ON",1);
+			#endif
+			#ifdef GCM_old_disp
+			LCD_String("FunTrace:ON",0,5);
+			#endif
 			_delay_ms(2000);
 			
 			eeprom_write_word(&funtrace_was_activated,FUNTRACE_PASS);
@@ -1632,7 +1651,7 @@ uint8_t analyze_Connection(void)
 	#ifdef USE_XBEE
 
 	
-	if (!xbee_reconnect())
+	if (!xbee_reconnect(0))
 	{
 		//Associated
 		ex_mode = online;
@@ -1755,7 +1774,7 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	
 	#ifdef TP_comp_debug
 
-	LCD_Clear();
+	lcd_Cls(BGC);
 	if (optholder.T_Compensation_enable)
 	{
 		Print_add_Line("Tcomp ena",1);
@@ -1958,14 +1977,14 @@ int main(void)
 
 	/*
 	adc_init(0x0e);
-	LCD_Clear();
+	lcd_Cls(BGC);
 	while (1)
 	{
 	double Vcc = readChannel( (_BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1)),20) ;
 	sprintf(print_temp,"%f V",Vcc);
 	LCD_String(print_temp,0,0);
 	_delay_ms(100);
-	LCD_Clear();
+	lcd_Cls(BGC);
 	_delay_ms(50);
 	}
 	*/
@@ -2001,6 +2020,9 @@ int main(void)
 	uint8_t sim_xb_rep = 0xFF;
 	
 	_Bool CoordActive = false;
+	
+	// set default sc mask 
+	xbee_Set_Scan_Channels(xbee.ScanChannels);
 	// main part
 	while(1)
 	{
@@ -2051,7 +2073,7 @@ int main(void)
 	#ifdef USE_XBEE
 	
 
-	if(xbee_reset_connection())
+	if(xbee_reset_connection(0))
 	{
 		if(xbee_get_server_adrr())
 		{
@@ -2121,7 +2143,7 @@ int main(void)
 	{
 		while (1)
 		{
-			LCD_Clear();
+			lcd_Cls(BGC);
 			Print_add_Line("Errors:",1);
 			_delay_ms(2000);
 			//==============================================
@@ -2152,6 +2174,7 @@ int main(void)
 	}else  // One measure send cycle on startup
 
 	{
+		xbee_coordIdentifier(); // get name of connected Coordinator
 		reset_display(0);
 		//MEASUREMENT BLOCK
 		if (connected.BMP){ // measurement is only done if T OR P compensation is enabled
@@ -2382,11 +2405,19 @@ int main(void)
 				uint8_t i2cState = I2C_ClearBus();
 				
 				
-				LCD_Clear();
+				lcd_Cls(BGC);
 				char twiStr[11] ="";
 				sprintf(twiStr,"clearBUS:%d",i2cState);
 				
+				#ifdef ili9341
+				paint_string_row("I2C Bus Recovery",INFO,1,"",white);
+				paint_string_row(twiStr,VALUE,1,"",FGC);
+				#endif
+				#ifdef GCM_old_disp
 				LCD_String(twiStr,0,0);
+				#endif
+
+				
 				
 				connected.TWI = 1;
 				connected.DS3231M = 1;
@@ -2399,24 +2430,48 @@ int main(void)
 					DS3231M_read_time();
 					if(!CHECK_ERROR(TIMER_ERROR))
 					{
-						CLEAR_ERROR(I2C_BUS_ERROR);;
+						CLEAR_ERROR(I2C_BUS_ERROR);
+						#ifdef ili9341
+						paint_string_row("DS3231M OK",CORRVOL,1,"",FGC);
+						#endif
+						#ifdef GCM_old_disp
 						LCD_String("DS3231M OK",0,3);
+						#endif
+						
 						}else{
+						#ifdef ili9341
+						paint_string_row("DS3231M NO",CORRVOL,1,"",FGC);
+						#endif
+						#ifdef GCM_old_disp
 						LCD_String("DS3231M NO",0,3);
+						#endif
 					}
 					
 					
 
 					if (!BMP_Temp_and_Pressure())
 					{
+						#ifdef ili9341
+						paint_string_row("TEM/PRES OK",VOLUME,1,"",FGC);
+						#endif
+						#ifdef GCM_old_disp
 						LCD_String("TEM/PRES OK",0,2);
+						#endif
+						
+						
+
 						CLEAR_ERROR(TEMPPRESS_ERROR);;
 						CLEAR_ERROR(I2C_BUS_ERROR);;
 						connected.BMP =1 ;
 					}
 					else
 					{
+						#ifdef ili9341
+						paint_string_row("TEM/PRES NO",VOLUME,1,"",FGC);
+						#endif
+						#ifdef GCM_old_disp
 						LCD_String("TEM/PRES NO",0,2);
+						#endif
 						connected.BMP = 0;
 					}
 					
@@ -2518,7 +2573,7 @@ int main(void)
 			if (count_t_elapsed % (options.Ping_Intervall*60) == 2){
 				#ifdef USE_XBEE
 				
-				if (!xbee_reconnect())
+				if (!xbee_reconnect(0))
 				{
 					ex_mode = online;
 					//Associated
@@ -2569,7 +2624,13 @@ int main(void)
 							while (!CHECK_ERROR(NETWORK_ERROR) && ((numberMeasBuff) > 0))
 							{
 								sprintf(print_temp,"%03d",numberMeasBuff);
+								#ifdef ili9341
+								paint_string_row(print_temp,VOLUME,1,"",FGC);
+								#endif
+								#ifdef GCM_old_disp
 								LCD_String(print_temp,0,3);
+								#endif
+								
 								memcpy(sendbuffer,measBuffer[firstMeasBuff].data,MEASUREMENT_MESSAGE_LENGTH);
 								if( xbee_send_request(MEAS_MSG,sendbuffer, MEASUREMENT_MESSAGE_LENGTH) == 0xFF  )
 								{//=========================

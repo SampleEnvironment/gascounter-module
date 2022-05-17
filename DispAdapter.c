@@ -75,6 +75,10 @@ void lcd_Cls(unsigned int color){
 	#ifdef ili9341
 	LCD_Cls(color);
 	#endif
+
+	#ifdef GCM_old_disp
+		LCD_Clear();
+#endif
 }
 
 
