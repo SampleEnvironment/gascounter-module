@@ -151,10 +151,8 @@ typedef struct {
 	uint32_t Pressure_on_send;         /**< @brief Pressure the last time Data was sent/stored to the Server/memory (in 0.1 mbar)*/
 	uint32_t time_send;				   /**< @brief Absolute time of last sending of Data*/
 	uint32_t time_display_reset;       /**< @brief Absolute time of last Display Reset*/
-	uint32_t time_ping;				   /**< @brief Absolute time of last Ping*/
 	uint32_t time_Pressure_Temp_meas;  /**< @brief Absolute time of last Temp and Pressure Measurement */
 	uint32_t time_TWI_action;          /**< @brief Absolute time of last TWI read/write/stop */
-	uint32_t time_I2C_check;		   /**< @brief Absolute time of last I2C Peripheral checkup */
 	uint32_t time_valid_time_reading;   /**< @brief Absolute time of last Valid Time reading  */
 }lastType;
 
@@ -376,6 +374,6 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer);
 void execute_server_CMDS(uint8_t reply_id);
 uint8_t ping_server(void);
 void Set_Options(uint8_t *optBuffer,uint8_t answer_code);
-uint8_t analyze_Connection(void);
+//uint8_t analyze_Connection(void);
 
 #endif  // Gascounter_main.h

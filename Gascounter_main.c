@@ -51,6 +51,7 @@
 #include "module_globals.h"
 #include "adwandler.h"
 #include "assert.h"
+#include "timerUtil.h"
 
 
 
@@ -102,7 +103,7 @@ deltaType delta = {.Volume_since_last_send = 0,.Pressure_since_last_send = 0,.t_
 *
 * Timestamps and Pressurevalues for last send/display-reset/ping - Event
 */
-lastType last= {.Pressure_on_send = 0,.time_send = 0,.time_display_reset = 0,.time_ping = 0, .time_Pressure_Temp_meas = 0, .time_I2C_check = 0,.time_valid_time_reading = 0};
+lastType last= {.Pressure_on_send = 0,.time_send = 0,.time_display_reset = 0, .time_Pressure_Temp_meas = 0,.time_valid_time_reading = 0};
 
 
 
@@ -794,7 +795,7 @@ void displayTemPreVol(void){
 	
 	paint_string_row(print_temp,INFO,0,"", FGC);
 	
-	
+
 
 	if (ex_mode == online)
 	{
@@ -803,11 +804,11 @@ void displayTemPreVol(void){
 	}
 	else
 	{
-		if(NetStatIndex == 1){
+		if(xbee.netstat == NO_SERVER){
 			paint_string_row(xbee_get_coordID(),CONN,0,"", orange);
 			
 		}
-		if(NetStatIndex == 2){
+		if(xbee.netstat == NO_NETWORK){
 			paint_string_row(xbee_get_coordID(),CONN,0,"", red);
 		}
 	}
@@ -977,7 +978,7 @@ void displayTemPreVol(void){
 	}
 	else
 	{
-		paint_info_line(NetStat[NetStatIndex],0);
+		paint_info_line(NetStat[xbee.netstat],0);
 	}
 	
 	
@@ -1229,7 +1230,7 @@ void reset_display(uint8_t clear)
 	
 	if (clear)
 	{
-		lcd_Cls(white);
+		lcd_Cls(BGC);
 	}
 
 	paint_Main();
@@ -1336,7 +1337,7 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer)
 				paint_Value(frameBuffer[reply_Id].data_len,VOLUME,1,3,"");
 				#endif
 				#ifdef GCM_old_disp
-				Print_add_Line("len false",0,0);
+				Print_add_Line("len false",0);
 				LCD_Value(frameBuffer[reply_Id].data_len,0,0,1,"num ");
 				#endif
 
@@ -1609,6 +1610,7 @@ uint8_t ping_server(void)
 		_delay_ms(500);
 		SET_ERROR(NETWORK_ERROR);
 		ex_mode = offline;
+		t_start(RECONNECT,options.Ping_Intervall*60);
 		return 0;
 	}
 	else
@@ -1638,11 +1640,10 @@ uint8_t ping_server(void)
 /**
 * @brief Checks current Connection Status. Possible states are "No Network" if no connection to a coordinator could be established. "No Server", if the Device is connected to a coordinator but, pings sent by #ping_server() are not answered. And "Online" if pings are answered by the server. The State is saved in #NetStatIndex
 *
-* @param dest_high high 32-bit of coordinator address
-* @param dest_low  low  32-bit of coordinator address
 *
 * @return uint8_t 1 if online and 0 if there are any problems with the connection to the server
 */
+/*
 uint8_t analyze_Connection(void)
 {
 	FUNCTION_TRACE
@@ -1658,6 +1659,9 @@ uint8_t analyze_Connection(void)
 		CLEAR_ERROR(NETWORK_ERROR);
 		
 		CLEAR_ERROR(NO_REPLY_ERROR);
+		
+		xbee_coordIdentifier();
+		
 		if(!ping_server()){
 			paint_info_line("NoServ",0);
 			NetStatIndex = 2;
@@ -1687,7 +1691,7 @@ uint8_t analyze_Connection(void)
 	
 	#endif
 }
-
+*/
 
 /**
 * @brief Receives new options in #buffer and validates them. The validity of the options is reported back to the Server via a #OPTIONS_SET_ACK Message containing the status#byte_93.
@@ -2021,7 +2025,7 @@ int main(void)
 	
 	_Bool CoordActive = false;
 	
-	// set default sc mask 
+	// set default sc mask
 	xbee_Set_Scan_Channels(xbee.ScanChannels);
 	// main part
 	while(1)
@@ -2204,7 +2208,8 @@ int main(void)
 				_delay_ms(500);
 				SET_ERROR(NETWORK_ERROR);
 				ex_mode = offline;
-				analyze_Connection();
+				t_start(RECONNECT,options.Ping_Intervall*60);
+
 				
 				
 			}
@@ -2374,7 +2379,8 @@ int main(void)
 					_delay_ms(500);
 					SET_ERROR(NETWORK_ERROR);
 					ex_mode = offline;
-					analyze_Connection();
+					t_start(RECONNECT,options.Ping_Intervall*60);
+
 				}
 			}
 			
@@ -2395,9 +2401,9 @@ int main(void)
 		//		Checks on all I2C DEVICES are done every 5min
 		//=========================================================================================
 		
-		if ((count_t_elapsed - last.time_I2C_check) > 10 )
+		if (t_check(I2C_CHECK))
 		{
-			last.time_I2C_check = count_t_elapsed;
+			t_start(I2C_CHECK,10);
 			
 			if(!connected.TWI || !connected.DS3231M || (!connected.BMP && connected.BMP_on_Startup) || CHECK_ERROR(I2C_BUS_ERROR))
 			{
@@ -2520,15 +2526,15 @@ int main(void)
 			//   PING
 			//==========================================================
 			// since pressure/temp is measured every 5s and ping is done every 60+2 seconds to ensure they dont get triggerd at the same Second
-			if (((count_t_elapsed % (options.Ping_Intervall*60)) == 2) && ((count_t_elapsed - last.time_ping) > 5 ))
+			if (t_check(PING))
 			{
-				last.time_ping = count_t_elapsed;
+				t_start(PING,options.Ping_Intervall * 60);
 				
 				
 				if(!ping_server()){
-					if(!analyze_Connection()){
-						break; // Ping unsuccessful --> offline Mode
-					}
+
+					break; // Ping unsuccessful --> offline Mode
+
 				}
 				
 				
@@ -2570,7 +2576,11 @@ int main(void)
 			//========================================================
 			// try to Reconnect after every 60s (Reconnect_after_time)
 			//========================================================
-			if (count_t_elapsed % (options.Ping_Intervall*60) == 2){
+			if (t_check(RECONNECT)){
+				
+				t_start(RECONNECT,options.Ping_Intervall*60);
+				
+				paint_string_row("RECON",CONN +1 ,1,"",red);
 				#ifdef USE_XBEE
 				
 				if (!xbee_reconnect(0))
@@ -2638,6 +2648,7 @@ int main(void)
 									_delay_ms(500);
 									SET_ERROR(NETWORK_ERROR);
 									ex_mode = offline;
+									t_start(RECONNECT,options.Ping_Intervall*60);
 									reset_display(1);
 									break;
 									

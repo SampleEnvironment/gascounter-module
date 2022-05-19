@@ -21,11 +21,16 @@
 #include "disp/gcm_old_lcd_driver.h"
 #endif
 
+#ifdef ili9341
 #include "disp/display_lib.h"
 #include "disp/ili9341_driver.h"
-
-
 #include "StringPixelCoordTable_ili9341.h"
+#endif
+
+
+
+#ifdef ili9341
+
 
 InitScreenType InitScreen_ili = {
 	.ForeColor = ERR,
@@ -37,7 +42,7 @@ InitScreenType InitScreen_ili = {
 	.XScale = 1,
 	.YScale = 1
 };
-
+#endif
 
 
 void lcd_init(void){
@@ -77,8 +82,8 @@ void lcd_Cls(unsigned int color){
 	#endif
 
 	#ifdef GCM_old_disp
-		LCD_Clear();
-#endif
+	LCD_Clear();
+	#endif
 }
 
 
@@ -154,20 +159,24 @@ void paint_info_line(char * line, _Bool update){
 
 
 
-void paint_string_row(char *text,ROW_NAME row,uint8_t update,char* unit,uint16_t color){
-		if (update)
-		{
-			lcd_Print("               ",X_LEFT_EDGE + DESCRUPTOR_LEN * FONT2_W,Y_VALUES_START + FONT2_H * row,2,1,1,color,BGC);
-		}
-		
-		strcat(text," ");
-		
-		lcd_Print(text,X_LEFT_EDGE + DESCRUPTOR_LEN * FONT2_W,Y_VALUES_START + FONT2_H * row,2,1,1,color,BGC);
 
-		lcd_Print(unit,HALF_SPACE_WIDTH_FONT_2 + X_LEFT_EDGE + (DESCRUPTOR_LEN+strlen(text)-1) * FONT2_W, Y_VALUES_START + FONT2_H * row,2,1,1,color,BGC);
+void paint_string_row(char *text,ROW_NAME row,uint8_t update,char* unit,uint16_t color){
+	#ifdef ili9341
+	if (update)
+	{
+		lcd_Print("               ",X_LEFT_EDGE + DESCRUPTOR_LEN * FONT2_W,Y_VALUES_START + FONT2_H * row,2,1,1,color,BGC);
+	}
+	
+	lcd_Print(text,X_LEFT_EDGE + DESCRUPTOR_LEN * FONT2_W,Y_VALUES_START + FONT2_H * row,2,1,1,color,BGC);
+	
+	lcd_Print(" ",X_LEFT_EDGE + DESCRUPTOR_LEN * FONT2_W + strlen(text) * FONT2_W,Y_VALUES_START + FONT2_H * row,2,1,1,color,BGC);
+
+	lcd_Print(unit,HALF_SPACE_WIDTH_FONT_2 + X_LEFT_EDGE + (DESCRUPTOR_LEN+strlen(text)) * FONT2_W, Y_VALUES_START + FONT2_H * row,2,1,1,color,BGC);
+	#endif
 }
 
 void paint_Main(void){
+	#ifdef ili9341
 	lcd_Print("Inf:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * INFO  ,2,1,1,FGC,BGC);
 	lcd_Print("Val:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * VALUE  ,2,1,1,FGC,BGC);
 	lcd_Print("Vol:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * VOLUME ,2,1,1,FGC,BGC);
@@ -175,19 +184,25 @@ void paint_Main(void){
 	lcd_Print("Tmp:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * TEMP   ,2,1,1,FGC,BGC);
 	lcd_Print("Prs:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * PRESS  ,2,1,1,FGC,BGC);
 	lcd_Print("Con:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * CONN  ,2,1,1,FGC,BGC);
-} 
+
+	#endif
+}
 
 
 
 void paint_Value(uint64_t val,ROW_NAME row,uint8_t precision, uint8_t min_width,char* unit){
+	#ifdef ili9341
 	char numberbuffer[30];
 	dtostrf(((double)val)/pow(10,precision),min_width,precision,numberbuffer);
 	
 	paint_string_row(numberbuffer,row,0,unit,white);
+	#endif
 }
 
 void paint_Error(char* text, ROW_NAME row){
+	#ifdef ili9341
 	paint_string_row(text,row,1,"",red);
+	#endif
 }
 
 //=========================================================================
@@ -198,6 +213,8 @@ void paint_Error(char* text, ROW_NAME row){
 // if FirstLine is 1 clear page and start with first line
 void InitScreen_AddLine_ili(const char* Text, const char FirstLine)
 {
+	#ifdef ili9341
+
 	if (FirstLine == 1)
 	{
 		InitScreen_ili.NextLine = 1;
@@ -219,21 +236,28 @@ void InitScreen_AddLine_ili(const char* Text, const char FirstLine)
 		_delay_ms(1000);		  // wait until next page is displayed
 	}
 	_delay_ms(500);
+	#endif // ili9341
 
 }
 
 void setInitScreen_ili(uint16_t fore, uint16_t back, uint8_t nextLine, uint8_t FontNr, uint8_t XScale, uint8_t YScale){
+	#ifdef ili9341
+
 	InitScreen_ili.ForeColor = fore;
 	InitScreen_ili.BackColor = back;
 	InitScreen_ili.NextLine = nextLine;
 	InitScreen_ili.FontNr = FontNr;
 	InitScreen_ili.XScale = XScale;
 	InitScreen_ili.YScale = YScale;
+	#endif
 }
 
 
 void paint_info_line_ili(char *line, _Bool update)
 {
+	#ifdef ili9341
+
 	if (!update) LCD_Print("                      ",  X_PIL_2, Y_PIL_90, 1, 1, 1, FGC, BGC);  // clears line (not necessary if in update mode)
 	LCD_Print(line,  X_PIL_2, Y_PIL_90, 1, 1, 1, ERR, BGC);
+	#endif
 }
