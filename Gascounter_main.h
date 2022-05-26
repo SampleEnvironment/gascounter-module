@@ -283,7 +283,8 @@ extern volatile statusType status_ms_bytes;
 extern volatile uint8_t Xbee_Associated;
 extern enum PARENT_MODE ex_mode;
 extern uint16_t status_reset_on_send;
-
+extern optType options;
+extern uint8_t position_volume_dot_point;
 
 // I²C Codes
 
@@ -365,10 +366,9 @@ void init_ports(void);
 void init_timer(void);
 void init_interrupts(void);
 
-void displayTemPreVol(void);
+
 void Temp_Press_CorrectedVolume(void);
 void PT_Plausibility(void);
-void reset_display(uint8_t clear);
 void Funtrace_enter(uint8_t Function_ID);
 uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer);
 void execute_server_CMDS(uint8_t reply_id);

@@ -45,7 +45,9 @@ typedef enum {
 	CORRVOL,
 	TEMP,
 	PRESS,
-	CONN
+	CONN,
+	MULT1,
+	MULT2
 }ROW_NAME;
 
 typedef struct {
@@ -78,6 +80,7 @@ void lcd_Draw_Cross(uint16_t x0,uint16_t y0,uint16_t x1,uint16_t y1);
 void Print_add_Line(char* Text,uint8_t first_line );
 void setInitScreen(uint16_t fore, uint16_t back, uint8_t nextLine, uint8_t FontNr, uint8_t XScale, uint8_t YScale);
 void paint_info_line(char * line, _Bool update);
+void paint_string_row_col(char *text,ROW_NAME row,uint8_t col, uint16_t color);
 void paint_string_row(char *text,ROW_NAME row,uint8_t update,char* unit,uint16_t color);
 void paint_Value(uint64_t val,ROW_NAME row,uint8_t precision, uint8_t min_width,char* unit);
 void paint_Error(char* text, ROW_NAME row);
@@ -85,4 +88,8 @@ void paint_Main(void);
 void InitScreen_AddLine_ili(const char* Text, const char FirstLine);
 void setInitScreen_ili(uint16_t fore, uint16_t back, uint8_t nextLine, uint8_t FontNr, uint8_t XScale, uint8_t YScale);
 void paint_info_line_ili(char *line, _Bool update);
+void paint_store_meas(uint8_t meas_in_Buffer, uint8_t max_Number );
+void paint_send_stored_meas(uint8_t meas_in_Buffer, uint8_t max_Number, uint8_t update);
+void displayTemPreVol(void);
+void reset_display(uint8_t clear);
 #endif /* DISPADAPTER_H_ */

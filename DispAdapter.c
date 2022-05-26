@@ -14,6 +14,12 @@
 
 #include "DispAdapter.h"
 #include "config.h"
+#include "Gascounter_main.h"
+
+#include "xbee.h"
+#include "I2C_utilities.h"
+#include "DS3231M.h"
+#include "status.h"
 
 
 #ifdef GCM_old_disp
@@ -43,6 +49,16 @@ InitScreenType InitScreen_ili = {
 	.YScale = 1
 };
 #endif
+
+
+/************************************************************************/
+/* Activity Indicator                                                   */
+/************************************************************************/
+uint8_t activity_indicator = 0; /**< @brief  Activity Inticator on the bottom Part of the Screen. It is incremented every #Measure_Interval for more information look in #displayTemPreVol()  */
+
+
+
+char strBuff[30];
 
 
 void lcd_init(void){
@@ -158,7 +174,11 @@ void paint_info_line(char * line, _Bool update){
 
 
 
-
+void paint_string_row_col(char *text,ROW_NAME row,uint8_t col, uint16_t color){
+	#ifdef ili9341
+	lcd_Print(text,X_LEFT_EDGE + col * FONT2_W ,Y_VALUES_START + FONT2_H * row  ,2,1,1,color,BGC);
+	#endif
+}
 
 void paint_string_row(char *text,ROW_NAME row,uint8_t update,char* unit,uint16_t color){
 	#ifdef ili9341
@@ -260,4 +280,422 @@ void paint_info_line_ili(char *line, _Bool update)
 	if (!update) LCD_Print("                      ",  X_PIL_2, Y_PIL_90, 1, 1, 1, FGC, BGC);  // clears line (not necessary if in update mode)
 	LCD_Print(line,  X_PIL_2, Y_PIL_90, 1, 1, 1, ERR, BGC);
 	#endif
+}
+
+void paint_store_meas(uint8_t meas_in_Buffer, uint8_t max_Number ){
+	
+	#ifdef ili9341
+	sprintf(strBuff,"Buffer: %03d/%03d",meas_in_Buffer,max_Number);
+	paint_string_row_col(strBuff,MULT1,0,orange);
+	#endif
+	
+	#ifdef GCM_old_disp
+	sprintf(strBuff,"Buff:%03d/%03d",meas_in_Buffer,max_Number);
+	LCD_String(strBuff, 0,0);
+	#endif
+	
+	
+
+}
+
+void paint_send_stored_meas(uint8_t meas_in_Buffer, uint8_t max_Number, uint8_t update){
+	#ifdef ili9341
+	if (!update)
+	{
+		paint_string_row(xbee_get_coordID(),CONN,0,"", green);
+		paint_string_row_col("Sending Datasets",MULT1,0,green);
+	}
+
+	sprintf(strBuff,"Buffer: %03d/%03d",meas_in_Buffer,max_Number);
+	paint_string_row_col(strBuff,MULT2,0,green);
+	#endif
+	
+	#ifdef GCM_old_disp
+	if (!update)
+	{
+		lcd_Cls(BGC);
+		
+		LCD_String("Sending Old",0,0);
+		LCD_String("Datasets",0,1);
+		LCD_String("Remaining:",0,2)
+	}
+
+	
+	sprintf(strBuff,"Buff:%03d/%03d",meas_in_Buffer,max_Number);
+	LCD_String(strBuff, 0,3);
+	#endif
+	
+}
+
+
+/**
+* @brief Displays the current System-Time, #Temperature_value, #Pressure_value (if compensation is enabled), options#Value, options#Volume and options#CorrVolume on the LCD.
+* Additionally the connection status and any error is displayed.
+*
+*
+* @return void
+*/
+void displayTemPreVol(void){
+	
+
+	
+	
+	#ifdef ili9341
+	
+
+	
+	
+	if ( CHECK_ERROR(TEMPPRESS_ERROR))
+	{
+		paint_Error("TEMP ERR",TEMP);
+	}
+	if (CHECK_ERROR(TEMPPRESS_ERROR))
+	{
+		paint_Error("PRESS ERR",PRESS);
+		if (options.T_Compensation_enable){
+			paint_Error("TEMP ERR",TEMP);
+		}
+
+	}
+	
+	// TEMPERATURE
+	if (!(options.T_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
+	{
+
+		paint_Value( options.Temperature_value - 2732,TEMP, 1, 4, "°C");
+	}
+	else{
+
+		paint_Error("TEMP ERR",TEMP);
+	}
+	
+	
+	//PRESSURE
+	if(!(options.p_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
+	{
+		paint_Value(options.Pressure_value,PRESS, 1, 6, "mbar");
+	}
+	else{
+
+		paint_Error("PRESS ERR",PRESS);
+	}
+	
+
+	if (!connected.BMP &&  connected.BMP_on_Startup)
+	{
+		paint_Error("BMP Sensor",TEMP);
+		paint_Error("Error",PRESS);
+		
+		
+	}
+
+
+
+	
+	//VOLUME
+
+
+	paint_Value(options.Value / options.step_Volume,VALUE, position_volume_dot_point, 1,"m³");
+
+	
+
+	paint_Value(options.Volume / options.step_Volume,VOLUME, position_volume_dot_point, 1, "m³");
+	
+
+	paint_Value(options.CorrVolume / options.step_Volume, CORRVOL, position_volume_dot_point, 1,"m³");
+	
+	
+	DS3231M_read_time();
+	
+	
+	if (connected.TWI && connected.DS3231M)
+	{
+		sprintf(strBuff,"%02i:%02i", Time.tm_hour, Time.tm_min);
+
+	}
+	else
+	{
+		sprintf(strBuff,"NoI2C");
+	}
+	
+
+	
+	
+	
+	uint8_t indicator = activity_indicator % 4;
+	switch (indicator)
+	{
+		case 0:
+		strcat(strBuff,"|");
+		break;
+		case 1:
+		strcat(strBuff,"/");
+		break;
+		case 2:
+		strcat(strBuff,"-");
+		break;
+		case 3:
+		strcat(strBuff,"\\");
+		break;
+	}
+	
+	char versionStr[10];
+	sprintf(versionStr,"v%i.%i",version.Branch_id,version.Fw_version);
+	
+	strcat(strBuff,versionStr);
+	
+	
+	paint_string_row(strBuff,INFO,0,"", FGC);
+	
+
+
+	if (ex_mode == online)
+	{
+		paint_string_row(xbee_get_coordID(),CONN,0,"", green);
+		
+	}
+	else
+	{
+		if(xbee.netstat == NO_SERVER){
+			paint_string_row(xbee_get_coordID(),CONN,0,"", orange);
+			
+		}
+		if(xbee.netstat == NO_NETWORK){
+			paint_string_row(xbee_get_coordID(),CONN,0,"", red);
+		}
+	}
+
+
+	
+	
+	activity_indicator++;
+	
+
+	
+	
+	#endif
+	
+	
+	
+	
+	
+
+	#ifdef GCM_old_disp
+	/*
+	LCD_Clear_row_from_column(0,0);
+
+	sprintf(print_temp,BYTE_TO_BINARY_PATTERN,BYTE_TO_BINARY(status.device));
+	LCD_String(print_temp,0,0);
+	
+	sprintf(print_temp,"%i.%i.20%i",Time.tm_mday,Time.tm_mon,Time.tm_year);
+	LCD_String(print_temp,0,0);
+	
+	*/
+	
+	
+	if ( CHECK_ERROR(TEMPPRESS_ERROR))
+	{
+		/*
+		lcd_Cls(BGC);
+		LCD_String("TempComp is",0,0);
+		LCD_String("enabled but",0,1);
+		LCD_String("no conn to",0,2);
+		LCD_String("TempPress",0,3);
+		LCD_String("Sensor (BMP)",0,4);
+		_delay_ms(2000);
+		*/
+		LCD_Clear_row_from_column(2, 3);
+		LCD_String("TEMP ERR",3,3);
+	}
+	if (CHECK_ERROR(TEMPPRESS_ERROR))
+	{
+		/*
+		lcd_Cls(BGC);
+		LCD_String("PressComp is",0,0);
+		LCD_String("enabled but",0,1);
+		LCD_String("no conn to",0,2);
+		LCD_String("TempPress",0,3);
+		LCD_String("Sensor (BMP)",0,4);
+		_delay_ms(2000);
+		*/
+		LCD_Clear_row_from_column(2, 4);
+		LCD_String("PRESS ERR",3,4);
+		if (options.T_Compensation_enable){
+			LCD_String("TEMP ERR",3,3);
+		}
+
+	}
+	
+
+	
+	// TEMPERATURE
+	if (!(options.T_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
+	{
+		LCD_Clear_row_from_column(2, 3);
+		LCD_Value((int32_t) options.Temperature_value - 2732, 1, 2, 3, "°C");
+	}
+	else{
+		LCD_Clear_row_from_column(2, 3);
+		LCD_String("TEMP ERR",3,3);
+	}
+	
+	
+	//PRESSURE
+	if(!(options.p_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
+	{
+		LCD_Clear_row_from_column(2, 4);
+		LCD_Value(options.Pressure_value, 1, 2, 4, "mbar");
+	}
+	else{
+		LCD_Clear_row_from_column(2, 3);
+		LCD_String("PRESS ERR",3,4);
+	}
+	
+
+	if (!connected.BMP &&  connected.BMP_on_Startup)
+	{
+		LCD_Clear_row_from_column(2, 3);
+		LCD_String("BMP Sensor",2,3);
+		LCD_Clear_row_from_column(2, 4);
+		LCD_String("Error",2,4);
+		
+		
+	}
+
+
+
+	
+	//VOLUME
+	#ifndef FUNCTION_TRACE
+	//LCD_Clear_row_from_column(3, 0);
+	//LCD_Value(options.Value / options.step_Volume, position_volume_dot_point, 2, 0, "m³");
+	#endif
+	LCD_String(xbee_get_coordID(),0,0);
+	
+	
+	LCD_Clear_row_from_column(3, 1);
+	LCD_Value(options.Volume / options.step_Volume, position_volume_dot_point, 2, 1, "m³");
+	
+	LCD_Clear_row_from_column(3, 2);
+	LCD_Value(options.CorrVolume / options.step_Volume, position_volume_dot_point, 2, 2, "m³");
+	
+	DS3231M_read_time();
+	
+	
+	if (connected.TWI && connected.DS3231M)
+	{
+		sprintf(strBuff,"%02i:%02i", Time.tm_hour, Time.tm_min);		
+	}
+	else
+	{
+		sprintf(print_temp,"NoI2C");
+	}
+	
+
+
+	
+	
+	uint8_t indicator = activity_indicator % 4;
+	switch (indicator)
+	{
+		case 0:
+		strcat(strBuff,"|");
+		break;
+		case 1:
+		strcat(strBuff,"/");
+		break;
+		case 2:
+		strcat(strBuff,"-");
+		break;
+		case 3:
+		strcat(strBuff,"\\");
+		break;
+	}
+	
+	
+	LCD_String(strBuff, 0, 5);
+	
+	activity_indicator++;
+	
+	if (ex_mode == online)
+	{
+		
+		paint_info_line(NetStat[0],0);
+	}
+	else
+	{
+		paint_info_line(NetStat[xbee.netstat],0);
+	}
+	
+	
+	#ifndef FUNCTION_TRACE
+	LCD_String("A:", 0, 0); // Value
+	#endif
+	
+	LCD_String("V:", 0, 1); // Volume
+	LCD_String("C:", 0, 2); // CorrVolume
+	LCD_String("T:", 0, 3); // Temperature
+	LCD_String("P:", 0, 4); // Pressure
+	
+	
+	#endif
+	
+	
+	
+	
+	
+}
+
+
+/**
+* @brief Used to periodically reset contents of the display to the normal Layout.
+*
+*
+* @return void
+*/
+void reset_display(uint8_t clear)
+{
+
+
+
+
+	
+	#ifdef GCM_old_disp
+	if (clear)
+	{
+		lcd_Cls(BGC);
+		_delay_ms(100);
+	}
+
+	
+
+	LCD_String("A:", 0, 0); // Value
+	LCD_String("V:", 0, 1); // Volume
+	LCD_String("C:", 0, 2); // CorrVolume
+	LCD_String("T:", 0, 3); // Temperature
+	LCD_String("P:", 0, 4); // Pressure
+
+	
+	LCD_Clear_row_from_column(3, 0);
+	//LCD_Value(options.Value / options.step_Volume, position_volume_dot_point, 2, 0, "m³");
+	LCD_String(xbee_get_coordID(),0,0);
+	
+	LCD_Clear_row_from_column(3, 1);
+	LCD_Value(options.Volume / options.step_Volume, position_volume_dot_point, 2, 1, "m³");
+	
+	LCD_Clear_row_from_column(3, 2);
+	LCD_Value(options.CorrVolume / options.step_Volume, position_volume_dot_point, 2, 2, "m³");
+	#endif
+	
+	#ifdef ili9341
+	
+	if (clear)
+	{
+		lcd_Cls(BGC);
+	}
+
+	paint_Main();
+	#endif
+
+
 }

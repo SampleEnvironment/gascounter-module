@@ -230,11 +230,6 @@ uint8_t NetStatIndex = 0; /**< @brief  Current Element of #NetStat that is Print
 uint16_t Fw_version = FIRMWARE_VERSION ;
 uint8_t Branch_id = BRANCH_ID;
 
-/************************************************************************/
-/* Activity Indicator                                                   */
-/************************************************************************/
-uint8_t activity_indicator = 0; /**< @brief  Activity Inticator on the bottom Part of the Screen. It is incremented every #Measure_Interval for more information look in #displayTemPreVol()  */
-
 
 /************************************************************************/
 /* Storing Offline Data                                                 */
@@ -460,14 +455,9 @@ void store_measurement(void)
 	// if the number of stored measurements reaches the maximum number, the oldest measurements will be overwritten
 	if (numberMeasBuff == MEASBUFFER_LENGTH) firstMeasBuff = nextfreeMeasBuff;
 	
-	sprintf(print_temp,"Buff:%03d/%03d",numberMeasBuff,MEASBUFFER_LENGTH);
-	
-	#ifdef ili9341
-	paint_string_row(print_temp,INFO,1,"",orange);
-	#endif
-	#ifdef GCM_old_disp
-	LCD_String(print_temp, 0,0);
-	#endif
+
+	paint_store_meas(numberMeasBuff,MEASBUFFER_LENGTH);
+
 
 
 
@@ -676,329 +666,7 @@ void init_interrupts(void)
 }
 
 
-/**
-* @brief Displays the current System-Time, #Temperature_value, #Pressure_value (if compensation is enabled), options#Value, options#Volume and options#CorrVolume on the LCD.
-* Additionally the connection status and any error is displayed.
-*
-*
-* @return void
-*/
-void displayTemPreVol(void){
-	
-	Funtrace_enter(3);
-	
-	
-	#ifdef ili9341
-	
 
-	
-	
-	if ( CHECK_ERROR(TEMPPRESS_ERROR))
-	{
-		paint_Error("TEMP ERR",TEMP);
-	}
-	if (CHECK_ERROR(TEMPPRESS_ERROR))
-	{
-		paint_Error("PRESS ERR",PRESS);
-		if (options.T_Compensation_enable){
-			paint_Error("TEMP ERR",TEMP);
-		}
-
-	}
-	
-	// TEMPERATURE
-	if (!(options.T_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
-	{
-
-		paint_Value( options.Temperature_value - 2732,TEMP, 1, 4, "°C");
-	}
-	else{
-
-		paint_Error("TEMP ERR",TEMP);
-	}
-	
-	
-	//PRESSURE
-	if(!(options.p_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
-	{
-		paint_Value(options.Pressure_value,PRESS, 1, 6, "mbar");
-	}
-	else{
-
-		paint_Error("PRESS ERR",PRESS);
-	}
-	
-
-	if (!connected.BMP &&  connected.BMP_on_Startup)
-	{
-		paint_Error("BMP Sensor",TEMP);
-		paint_Error("Error",PRESSURE);
-		
-		
-	}
-
-
-
-	
-	//VOLUME
-
-
-	paint_Value(options.Value / options.step_Volume,VALUE, position_volume_dot_point, 1,"m³");
-
-	
-
-	paint_Value(options.Volume / options.step_Volume,VOLUME, position_volume_dot_point, 1, "m³");
-	
-
-	paint_Value(options.CorrVolume / options.step_Volume, CORRVOL, position_volume_dot_point, 1,"m³");
-	
-	
-	DS3231M_read_time();
-	
-	
-	if (connected.TWI && connected.DS3231M)
-	{
-		sprintf(print_temp,"%02i:%02i", Time.tm_hour, Time.tm_min);
-
-	}
-	else
-	{
-		sprintf(print_temp,"NoI2C");
-	}
-	
-
-	
-	
-	
-	uint8_t indicator = activity_indicator % 4;
-	switch (indicator)
-	{
-		case 0:
-		strcat(print_temp,"|");
-		break;
-		case 1:
-		strcat(print_temp,"/");
-		break;
-		case 2:
-		strcat(print_temp,"-");
-		break;
-		case 3:
-		strcat(print_temp,"\\");
-		break;
-	}
-	
-	char versionStr[10];
-	sprintf(versionStr,"v%i.%i",version.Branch_id,version.Fw_version);
-	
-	strcat(print_temp,versionStr);
-	
-	
-	paint_string_row(print_temp,INFO,0,"", FGC);
-	
-
-
-	if (ex_mode == online)
-	{
-		paint_string_row(xbee_get_coordID(),CONN,0,"", green);
-		
-	}
-	else
-	{
-		if(xbee.netstat == NO_SERVER){
-			paint_string_row(xbee_get_coordID(),CONN,0,"", orange);
-			
-		}
-		if(xbee.netstat == NO_NETWORK){
-			paint_string_row(xbee_get_coordID(),CONN,0,"", red);
-		}
-	}
-
-
-	
-	
-	activity_indicator++;
-	
-
-	
-	
-	#endif
-	
-	
-	
-	
-	
-
-	#ifdef GCM_old_disp
-	/*
-	LCD_Clear_row_from_column(0,0);
-
-	sprintf(print_temp,BYTE_TO_BINARY_PATTERN,BYTE_TO_BINARY(status.device));
-	LCD_String(print_temp,0,0);
-	
-	sprintf(print_temp,"%i.%i.20%i",Time.tm_mday,Time.tm_mon,Time.tm_year);
-	LCD_String(print_temp,0,0);
-	
-	*/
-	
-	
-	if ( CHECK_ERROR(TEMPPRESS_ERROR))
-	{
-		/*
-		lcd_Cls(BGC);
-		LCD_String("TempComp is",0,0);
-		LCD_String("enabled but",0,1);
-		LCD_String("no conn to",0,2);
-		LCD_String("TempPress",0,3);
-		LCD_String("Sensor (BMP)",0,4);
-		_delay_ms(2000);
-		*/
-		LCD_Clear_row_from_column(2, 3);
-		LCD_String("TEMP ERR",3,3);
-	}
-	if (CHECK_ERROR(TEMPPRESS_ERROR))
-	{
-		/*
-		lcd_Cls(BGC);
-		LCD_String("PressComp is",0,0);
-		LCD_String("enabled but",0,1);
-		LCD_String("no conn to",0,2);
-		LCD_String("TempPress",0,3);
-		LCD_String("Sensor (BMP)",0,4);
-		_delay_ms(2000);
-		*/
-		LCD_Clear_row_from_column(2, 4);
-		LCD_String("PRESS ERR",3,4);
-		if (options.T_Compensation_enable){
-			LCD_String("TEMP ERR",3,3);
-		}
-
-	}
-	
-
-	
-	// TEMPERATURE
-	if (!(options.T_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
-	{
-		LCD_Clear_row_from_column(2, 3);
-		LCD_Value((int32_t) options.Temperature_value - 2732, 1, 2, 3, "°C");
-	}
-	else{
-		LCD_Clear_row_from_column(2, 3);
-		LCD_String("TEMP ERR",3,3);
-	}
-	
-	
-	//PRESSURE
-	if(!(options.p_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
-	{
-		LCD_Clear_row_from_column(2, 4);
-		LCD_Value(options.Pressure_value, 1, 2, 4, "mbar");
-	}
-	else{
-		LCD_Clear_row_from_column(2, 3);
-		LCD_String("PRESS ERR",3,4);
-	}
-	
-
-	if (!connected.BMP &&  connected.BMP_on_Startup)
-	{
-		LCD_Clear_row_from_column(2, 3);
-		LCD_String("BMP Sensor",2,3);
-		LCD_Clear_row_from_column(2, 4);
-		LCD_String("Error",2,4);
-		
-		
-	}
-
-
-
-	
-	//VOLUME
-	#ifndef FUNCTION_TRACE
-	LCD_Clear_row_from_column(3, 0);
-	LCD_Value(options.Value / options.step_Volume, position_volume_dot_point, 2, 0, "m³");
-	#endif
-	
-	LCD_Clear_row_from_column(3, 1);
-	LCD_Value(options.Volume / options.step_Volume, position_volume_dot_point, 2, 1, "m³");
-	
-	LCD_Clear_row_from_column(3, 2);
-	LCD_Value(options.CorrVolume / options.step_Volume, position_volume_dot_point, 2, 2, "m³");
-	
-	DS3231M_read_time();
-	
-	
-	if (connected.TWI && connected.DS3231M)
-	{
-		if ((Time.tm_hour < 10))
-		{ if (Time.tm_min < 10) sprintf(print_temp,"0%i:0%i", Time.tm_hour, Time.tm_min);
-			else sprintf(print_temp,"0%i:%i", Time.tm_hour, Time.tm_min);
-		}
-		if (!(Time.tm_hour < 10))
-		{ if (Time.tm_min < 10) sprintf(print_temp,"%i:0%i", Time.tm_hour, Time.tm_min);
-			else sprintf(print_temp,"%i:%i", Time.tm_hour, Time.tm_min);
-		}
-		
-	}
-	else
-	{
-		sprintf(print_temp,"NoI2C");
-	}
-	
-
-
-	
-	
-	uint8_t indicator = activity_indicator % 4;
-	switch (indicator)
-	{
-		case 0:
-		strcat(print_temp,"|");
-		break;
-		case 1:
-		strcat(print_temp,"/");
-		break;
-		case 2:
-		strcat(print_temp,"-");
-		break;
-		case 3:
-		strcat(print_temp,"\\");
-		break;
-	}
-	
-	
-	LCD_String(print_temp, 0, 5);
-	
-	activity_indicator++;
-	
-	if (ex_mode == online)
-	{
-		
-		paint_info_line(NetStat[0],0);
-	}
-	else
-	{
-		paint_info_line(NetStat[xbee.netstat],0);
-	}
-	
-	
-	#ifndef FUNCTION_TRACE
-	LCD_String("A:", 0, 0); // Value
-	#endif
-	
-	LCD_String("V:", 0, 1); // Volume
-	LCD_String("C:", 0, 2); // CorrVolume
-	LCD_String("T:", 0, 3); // Temperature
-	LCD_String("P:", 0, 4); // Pressure
-	
-	
-	#endif
-	
-	
-	
-	
-	
-}
 
 
 
@@ -1186,58 +854,7 @@ void PT_Plausibility(void){
 }
 
 
-/**
-* @brief Used to periodically reset contents of the display to the normal Layout.
-*
-*
-* @return void
-*/
-void reset_display(uint8_t clear)
-{
 
-
-
-	FUNCTION_TRACE
-	Funtrace_enter(6);
-	
-	#ifdef GCM_old_disp
-	if (clear)
-	{
-		lcd_Cls(BGC);
-		_delay_ms(100);
-	}
-
-	
-
-	LCD_String("A:", 0, 0); // Value
-	LCD_String("V:", 0, 1); // Volume
-	LCD_String("C:", 0, 2); // CorrVolume
-	LCD_String("T:", 0, 3); // Temperature
-	LCD_String("P:", 0, 4); // Pressure
-
-	
-	LCD_Clear_row_from_column(3, 0);
-	LCD_Value(options.Value / options.step_Volume, position_volume_dot_point, 2, 0, "m³");
-	
-	LCD_Clear_row_from_column(3, 1);
-	LCD_Value(options.Volume / options.step_Volume, position_volume_dot_point, 2, 1, "m³");
-	
-	LCD_Clear_row_from_column(3, 2);
-	LCD_Value(options.CorrVolume / options.step_Volume, position_volume_dot_point, 2, 2, "m³");
-	#endif
-	
-	#ifdef ili9341
-	
-	if (clear)
-	{
-		lcd_Cls(BGC);
-	}
-
-	paint_Main();
-	#endif
-
-
-}
 
 
 
@@ -1646,51 +1263,52 @@ uint8_t ping_server(void)
 /*
 uint8_t analyze_Connection(void)
 {
-	FUNCTION_TRACE
-	Funtrace_enter(9);
-	
-	#ifdef USE_XBEE
+FUNCTION_TRACE
+Funtrace_enter(9);
 
-	
-	if (!xbee_reconnect(0))
-	{
-		//Associated
-		ex_mode = online;
-		CLEAR_ERROR(NETWORK_ERROR);
-		
-		CLEAR_ERROR(NO_REPLY_ERROR);
-		
-		xbee_coordIdentifier();
-		
-		if(!ping_server()){
-			paint_info_line("NoServ",0);
-			NetStatIndex = 2;
-			return 0;
-		}
-		else{
-			ex_mode = online;
-			CLEAR_ERROR(NETWORK_ERROR);;
-			CLEAR_ERROR(NO_REPLY_ERROR);;
-			return 1;
-		}
-		
-	}
-	else
-	{
+#ifdef USE_XBEE
 
-		paint_info_line("NoNetw",0);
-		NetStatIndex = 1;
-		return 0;
 
-	}
-	#endif
-	#ifdef USE_LAN
-	paint_info_line("NoServ",0);
-	NetStatIndex = 2;
-	return 0;
-	
-	#endif
+if (!xbee_reconnect(0))
+{
+//Associated
+ex_mode = online;
+CLEAR_ERROR(NETWORK_ERROR);
+
+CLEAR_ERROR(NO_REPLY_ERROR);
+
+xbee_coordIdentifier();
+
+if(!ping_server()){
+paint_info_line("NoServ",0);
+NetStatIndex = 2;
+return 0;
 }
+else{
+ex_mode = online;
+CLEAR_ERROR(NETWORK_ERROR);;
+CLEAR_ERROR(NO_REPLY_ERROR);;
+return 1;
+}
+
+}
+else
+{
+
+paint_info_line("NoNetw",0);
+NetStatIndex = 1;
+return 0;
+
+}
+#endif
+#ifdef USE_LAN
+paint_info_line("NoServ",0);
+NetStatIndex = 2;
+return 0;
+
+#endif
+}
+
 */
 
 /**
@@ -2580,7 +2198,6 @@ int main(void)
 				
 				t_start(RECONNECT,options.Ping_Intervall*60);
 				
-				paint_string_row("RECON",CONN +1 ,1,"",red);
 				#ifdef USE_XBEE
 				
 				if (!xbee_reconnect(0))
@@ -2628,18 +2245,12 @@ int main(void)
 						_delay_ms(2000);
 						if (numberMeasBuff > 0)
 						{
-							Print_add_Line("Sending Old",1);
-							Print_add_Line("Datasets",0);
-							Print_add_Line("Remaining:",0);
+							paint_send_stored_meas(numberMeasBuff,MEASBUFFER_LENGTH, 0);
+							
 							while (!CHECK_ERROR(NETWORK_ERROR) && ((numberMeasBuff) > 0))
 							{
-								sprintf(print_temp,"%03d",numberMeasBuff);
-								#ifdef ili9341
-								paint_string_row(print_temp,VOLUME,1,"",FGC);
-								#endif
-								#ifdef GCM_old_disp
-								LCD_String(print_temp,0,3);
-								#endif
+
+								paint_send_stored_meas(numberMeasBuff,MEASBUFFER_LENGTH, 1);
 								
 								memcpy(sendbuffer,measBuffer[firstMeasBuff].data,MEASUREMENT_MESSAGE_LENGTH);
 								if( xbee_send_request(MEAS_MSG,sendbuffer, MEASUREMENT_MESSAGE_LENGTH) == 0xFF  )
