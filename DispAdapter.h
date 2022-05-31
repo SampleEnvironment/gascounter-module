@@ -92,4 +92,6 @@ void paint_store_meas(uint8_t meas_in_Buffer, uint8_t max_Number );
 void paint_send_stored_meas(uint8_t meas_in_Buffer, uint8_t max_Number, uint8_t update);
 void displayTemPreVol(void);
 void reset_display(uint8_t clear);
+void I2C_Clear_view(uint8_t i2cState,uint8_t DS3231State, uint8_t BMPSate);
+
 #endif /* DISPADAPTER_H_ */

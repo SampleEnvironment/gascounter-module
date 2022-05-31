@@ -184,7 +184,7 @@ const uint16_t reset_display_Interval = 60 * 60;
 *
 * Time between Pressure-Temperature-Measurements (in s)
 */
-const uint8_t Measure_Interval = 5;
+const uint8_t Measure_Interval = 2;
 
 
 /************************************************************************/
@@ -500,7 +500,8 @@ void init(void)
 	Print_add_Line("HZB Gascount",1);
 	#endif
 
-	
+
+
 
 	sprintf(print_temp,"v%i.%i",version.Branch_id,version.Fw_version);
 	Print_add_Line(print_temp,0);
@@ -2027,21 +2028,8 @@ int main(void)
 			{
 				
 				uint8_t i2cState = I2C_ClearBus();
-				
-				
-				lcd_Cls(BGC);
-				char twiStr[11] ="";
-				sprintf(twiStr,"clearBUS:%d",i2cState);
-				
-				#ifdef ili9341
-				paint_string_row("I2C Bus Recovery",INFO,1,"",white);
-				paint_string_row(twiStr,VALUE,1,"",FGC);
-				#endif
-				#ifdef GCM_old_disp
-				LCD_String(twiStr,0,0);
-				#endif
-
-				
+				uint8_t DS3231Mstate = 0; 
+				uint8_t BMPState = 0;
 				
 				connected.TWI = 1;
 				connected.DS3231M = 1;
@@ -2052,50 +2040,26 @@ int main(void)
 				{
 					
 					DS3231M_read_time();
-					if(!CHECK_ERROR(TIMER_ERROR))
+					
+					DS3231Mstate = CHECK_ERROR(TIMER_ERROR);
+					 
+					if(!DS3231Mstate)
 					{
 						CLEAR_ERROR(I2C_BUS_ERROR);
-						#ifdef ili9341
-						paint_string_row("DS3231M OK",CORRVOL,1,"",FGC);
-						#endif
-						#ifdef GCM_old_disp
-						LCD_String("DS3231M OK",0,3);
-						#endif
-						
-						}else{
-						#ifdef ili9341
-						paint_string_row("DS3231M NO",CORRVOL,1,"",FGC);
-						#endif
-						#ifdef GCM_old_disp
-						LCD_String("DS3231M NO",0,3);
-						#endif
+	
 					}
-					
-					
 
-					if (!BMP_Temp_and_Pressure())
+					
+					BMPState = BMP_Temp_and_Pressure();
+
+					if (!BMPState)
 					{
-						#ifdef ili9341
-						paint_string_row("TEM/PRES OK",VOLUME,1,"",FGC);
-						#endif
-						#ifdef GCM_old_disp
-						LCD_String("TEM/PRES OK",0,2);
-						#endif
-						
-						
-
 						CLEAR_ERROR(TEMPPRESS_ERROR);;
 						CLEAR_ERROR(I2C_BUS_ERROR);;
 						connected.BMP =1 ;
 					}
 					else
 					{
-						#ifdef ili9341
-						paint_string_row("TEM/PRES NO",VOLUME,1,"",FGC);
-						#endif
-						#ifdef GCM_old_disp
-						LCD_String("TEM/PRES NO",0,2);
-						#endif
 						connected.BMP = 0;
 					}
 					
@@ -2107,8 +2071,7 @@ int main(void)
 					connected.TWI = 1;
 				}
 				
-				_delay_ms(2000);
-				reset_display(1);
+			I2C_Clear_view(i2cState,DS3231Mstate,BMPState);
 				
 			}
 			

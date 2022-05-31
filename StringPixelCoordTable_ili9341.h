@@ -1,4 +1,4 @@
-// String and Pixel Coord Table for ILI9341
+ // String and Pixel Coord Table for ILI9341
 
 
 // there is 5px padding around the outer edge of the Display for placing elements,

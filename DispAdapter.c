@@ -17,6 +17,7 @@
 #include "Gascounter_main.h"
 
 #include "xbee.h"
+#include "xbee_AT_comm.h"
 #include "I2C_utilities.h"
 #include "DS3231M.h"
 #include "status.h"
@@ -57,6 +58,8 @@ InitScreenType InitScreen_ili = {
 uint8_t activity_indicator = 0; /**< @brief  Activity Inticator on the bottom Part of the Screen. It is incremented every #Measure_Interval for more information look in #displayTemPreVol()  */
 
 
+
+uint8_t sensor_err = 0;
 
 char strBuff[30];
 
@@ -344,49 +347,59 @@ void displayTemPreVol(void){
 	
 
 	
-	
-	if ( CHECK_ERROR(TEMPPRESS_ERROR))
-	{
-		paint_Error("TEMP ERR",TEMP);
-	}
-	if (CHECK_ERROR(TEMPPRESS_ERROR))
-	{
-		paint_Error("PRESS ERR",PRESS);
-		if (options.T_Compensation_enable){
-			paint_Error("TEMP ERR",TEMP);
-		}
-
-	}
-	
-	// TEMPERATURE
-	if (!(options.T_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
-	{
-
-		paint_Value( options.Temperature_value - 2732,TEMP, 1, 4, "°C");
-	}
-	else{
-
-		paint_Error("TEMP ERR",TEMP);
-	}
-	
-	
-	//PRESSURE
-	if(!(options.p_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
-	{
-		paint_Value(options.Pressure_value,PRESS, 1, 6, "mbar");
-	}
-	else{
-
-		paint_Error("PRESS ERR",PRESS);
-	}
-	
-
 	if (!connected.BMP &&  connected.BMP_on_Startup)
 	{
 		paint_Error("BMP Sensor",TEMP);
 		paint_Error("Error",PRESS);
 		
+		sensor_err = 1;
 		
+		
+	}
+	else
+	{
+		
+		if ( CHECK_ERROR(TEMPPRESS_ERROR))
+		{
+			paint_Error("TEMP ERR",TEMP);
+		}
+		if (CHECK_ERROR(TEMPPRESS_ERROR))
+		{
+			paint_Error("PRESS ERR",PRESS);
+			if (options.T_Compensation_enable){
+				paint_Error("TEMP ERR",TEMP);
+			}
+
+		}
+		
+		// TEMPERATURE
+		if (!(options.T_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
+		{
+			if (sensor_err)
+			{
+				paint_string_row("",TEMP,1,"",white);
+				sensor_err = 0;
+			}
+			
+			paint_Value( options.Temperature_value - 2732,TEMP, 1, 4, "°C");
+		}
+		else{
+
+			paint_Error("TEMP ERR",TEMP);
+		}
+		
+		
+		//PRESSURE
+		if(!(options.p_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
+		{
+			paint_Value(options.Pressure_value,PRESS, 1, 6, "mbar");
+		}
+		else{
+
+			paint_Error("PRESS ERR",PRESS);
+		}
+		
+
 	}
 
 
@@ -445,19 +458,24 @@ void displayTemPreVol(void){
 	strcat(strBuff,versionStr);
 	
 	
-	paint_string_row(strBuff,INFO,0,"", FGC);
+	paint_string_row_col(strBuff,INFO,4, FGC);
 	
+	xbee_get_DB();
 
+	uint16_t x = X_LEFT_EDGE + (DESCRUPTOR_LEN+ 12) * FONT2_W+FONT2_W/2;
+	uint16_t y = Y_VALUES_START + FONT2_H * INFO;
 
 	if (ex_mode == online)
 	{
 		paint_string_row(xbee_get_coordID(),CONN,0,"", green);
+		LCD_conn_Stregth(0,xbee.RSSI,x, y, green);
 		
 	}
 	else
 	{
 		if(xbee.netstat == NO_SERVER){
 			paint_string_row(xbee_get_coordID(),CONN,0,"", orange);
+			LCD_conn_Stregth(0,xbee.RSSI,x, y, orange);
 			
 		}
 		if(xbee.netstat == NO_NETWORK){
@@ -465,6 +483,10 @@ void displayTemPreVol(void){
 		}
 	}
 
+
+
+	
+	
 
 	
 	
@@ -584,7 +606,7 @@ void displayTemPreVol(void){
 	
 	if (connected.TWI && connected.DS3231M)
 	{
-		sprintf(strBuff,"%02i:%02i", Time.tm_hour, Time.tm_min);		
+		sprintf(strBuff,"%02i:%02i", Time.tm_hour, Time.tm_min);
 	}
 	else
 	{
@@ -645,6 +667,75 @@ void displayTemPreVol(void){
 	
 	
 }
+
+void I2C_Clear_view(uint8_t i2cState,uint8_t DS3231State, uint8_t BMPSate){
+	lcd_Cls(BGC);
+	char twiStr[11] ="";
+	
+	
+	
+	
+	#ifdef ili9341
+	sprintf(twiStr,"clearBUS:%d",i2cState);
+	paint_string_row_col("I2C Bus Recovery",INFO,0,white);
+	paint_string_row(twiStr,VALUE,1,"",FGC);
+	
+	if (!DS3231State)
+	{
+		paint_string_row("DS3231M OK",CORRVOL,1,"",FGC);
+	}
+	else
+	{
+		paint_string_row("DS3231M NO",CORRVOL,1,"",FGC);
+	}
+	
+	if (!BMPSate)
+	{
+		paint_string_row("TEM/PRES OK",VOLUME,1,"",FGC);
+	}
+	else
+	{
+		paint_string_row("TEM/PRES NO",VOLUME,1,"",FGC);
+	}
+	
+	
+	#endif
+	
+	
+	
+
+	#ifdef  GCM_old_disp
+	sprintf(twiStr,"clearBUS:%d",i2cState);
+	LCD_String(twiStr,0,0);
+	
+	if (!DS3231State)
+	{
+		LCD_String("DS3231M OK",0,3);
+	}
+	else
+	{
+		LCD_String("DS3231M NO",0,3);
+	}
+	
+	if (!BMPSate)
+	{
+		paint_string_row("TEM/PRES OK",VOLUME,1,"",FGC);
+	}
+	else
+	{
+		LCD_String("TEM/PRES NO",0,2);
+	}
+	
+	#endif
+	
+	_delay_ms(2000);
+	reset_display(1);
+	
+	
+	
+}
+
+
 
 
 /**
