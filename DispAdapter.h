@@ -39,7 +39,8 @@
 #define HZB_Cyan        0b0000010011111100
 
 typedef enum {
-	INFO,
+	VERSION,
+	DATETIME,
 	VALUE,
 	VOLUME,
 	CORRVOL,
@@ -93,5 +94,6 @@ void paint_send_stored_meas(uint8_t meas_in_Buffer, uint8_t max_Number, uint8_t 
 void displayTemPreVol(void);
 void reset_display(uint8_t clear);
 void I2C_Clear_view(uint8_t i2cState,uint8_t DS3231State, uint8_t BMPSate);
+void paint_Date(void);
 
 #endif /* DISPADAPTER_H_ */

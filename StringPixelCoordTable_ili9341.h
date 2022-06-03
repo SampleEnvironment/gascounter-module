@@ -70,7 +70,7 @@
 //======================================================================================
 #define X_LEFT_EDGE (BORDER_OFFSET+3) 
 #define Y_VALUES_START 60
-#define DESCRUPTOR_LEN 4
+#define DESCRUPTOR_LEN 8
 
 
 

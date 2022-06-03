@@ -1250,6 +1250,8 @@ uint8_t ping_server(void)
 		}
 		
 	}
+	
+	paint_Date();
 	return 1;
 }
 
@@ -1644,8 +1646,7 @@ int main(void)
 	
 	_Bool CoordActive = false;
 	
-	// set default sc mask
-	xbee_Set_Scan_Channels(xbee.ScanChannels);
+
 	// main part
 	while(1)
 	{
@@ -1694,7 +1695,11 @@ int main(void)
 	#endif
 
 	#ifdef USE_XBEE
+	// set default sc mask
+	xbee_Set_Scan_Channels(xbee.ScanChannels);
 	
+	sprintf(print_temp,"SC:%#04x",xbee_Scan_Channels());
+	Print_add_Line(print_temp,2);
 
 	if(xbee_reset_connection(0))
 	{
@@ -2028,7 +2033,7 @@ int main(void)
 			{
 				
 				uint8_t i2cState = I2C_ClearBus();
-				uint8_t DS3231Mstate = 0; 
+				uint8_t DS3231Mstate = 0;
 				uint8_t BMPState = 0;
 				
 				connected.TWI = 1;
@@ -2042,11 +2047,11 @@ int main(void)
 					DS3231M_read_time();
 					
 					DS3231Mstate = CHECK_ERROR(TIMER_ERROR);
-					 
+					
 					if(!DS3231Mstate)
 					{
 						CLEAR_ERROR(I2C_BUS_ERROR);
-	
+						
 					}
 
 					
@@ -2071,7 +2076,7 @@ int main(void)
 					connected.TWI = 1;
 				}
 				
-			I2C_Clear_view(i2cState,DS3231Mstate,BMPState);
+				I2C_Clear_view(i2cState,DS3231Mstate,BMPState);
 				
 			}
 			

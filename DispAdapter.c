@@ -200,13 +200,22 @@ void paint_string_row(char *text,ROW_NAME row,uint8_t update,char* unit,uint16_t
 
 void paint_Main(void){
 	#ifdef ili9341
-	lcd_Print("Inf:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * INFO  ,2,1,1,FGC,BGC);
-	lcd_Print("Val:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * VALUE  ,2,1,1,FGC,BGC);
-	lcd_Print("Vol:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * VOLUME ,2,1,1,FGC,BGC);
-	lcd_Print("Cor:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * CORRVOL,2,1,1,FGC,BGC);
-	lcd_Print("Tmp:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * TEMP   ,2,1,1,FGC,BGC);
-	lcd_Print("Prs:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * PRESS  ,2,1,1,FGC,BGC);
-	lcd_Print("Con:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * CONN  ,2,1,1,FGC,BGC);
+	//lcd_Print("Inf:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * DATETIME  ,2,1,1,FGC,BGC);
+
+	sprintf(strBuff,"HZB-GCM v%i.%i",version.Branch_id,version.Fw_version);
+	paint_string_row_col(strBuff,VERSION,0,FGC);
+	
+	if(Time.tm_year != 0){
+	sprintf(strBuff,"%02i.%02i.%04i ", Time.tm_mday,Time.tm_mon,Time.tm_year);
+	paint_string_row_col(strBuff,DATETIME,0,FGC);
+	}
+	
+	lcd_Print("Value :",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * VALUE  ,2,1,1,FGC,BGC);
+	lcd_Print("Volume:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * VOLUME ,2,1,1,FGC,BGC);
+	lcd_Print("CorVol:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * CORRVOL,2,1,1,FGC,BGC);
+	lcd_Print("Temp. :",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * TEMP   ,2,1,1,FGC,BGC);
+	lcd_Print("Press.:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * PRESS  ,2,1,1,FGC,BGC);
+	lcd_Print("Coord.:",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * CONN  ,2,1,1,FGC,BGC);
 
 	#endif
 }
@@ -305,12 +314,12 @@ void paint_send_stored_meas(uint8_t meas_in_Buffer, uint8_t max_Number, uint8_t 
 	#ifdef ili9341
 	if (!update)
 	{
-		paint_string_row(xbee_get_coordID(),CONN,0,"", green);
-		paint_string_row_col("Sending Datasets",MULT1,0,green);
+		//paint_string_row(xbee_get_coordID(),CONN,0,"", green);
+		paint_string_row_col("Sending Datasets  ",CONN,0,green);
 	}
 
 	sprintf(strBuff,"Buffer: %03d/%03d",meas_in_Buffer,max_Number);
-	paint_string_row_col(strBuff,MULT2,0,green);
+	paint_string_row_col(strBuff,MULT1,0,green);
 	#endif
 	
 	#ifdef GCM_old_disp
@@ -420,50 +429,53 @@ void displayTemPreVol(void){
 	
 	DS3231M_read_time();
 	
-	
-	if (connected.TWI && connected.DS3231M)
-	{
-		sprintf(strBuff,"%02i:%02i", Time.tm_hour, Time.tm_min);
 
-	}
-	else
-	{
-		sprintf(strBuff,"NoI2C");
-	}
-	
 
-	
-	
+
 	
 	uint8_t indicator = activity_indicator % 4;
+	char indStr[30] = " ";
 	switch (indicator)
 	{
 		case 0:
-		strcat(strBuff,"|");
+		sprintf(indStr, "|");
 		break;
 		case 1:
-		strcat(strBuff,"/");
+		sprintf(indStr, "/");
 		break;
 		case 2:
-		strcat(strBuff,"-");
+		sprintf(indStr,  "-");
 		break;
 		case 3:
-		strcat(strBuff,"\\");
+		sprintf(indStr, "\\");
 		break;
 	}
 	
-	char versionStr[10];
-	sprintf(versionStr,"v%i.%i",version.Branch_id,version.Fw_version);
+
 	
-	strcat(strBuff,versionStr);
+	if (connected.TWI && connected.DS3231M)
+	{
+		sprintf(strBuff," %02i:%02i",Time.tm_hour, Time.tm_min);
+	}
+	else
+	{
+		sprintf(strBuff," NoI2C");
+	}
+	
+	strcat(indStr,strBuff);
+
+	paint_string_row_col(indStr,DATETIME,11, FGC);
+	
+
+
 	
 	
-	paint_string_row_col(strBuff,INFO,4, FGC);
+
 	
 	xbee_get_DB();
 
-	uint16_t x = X_LEFT_EDGE + (DESCRUPTOR_LEN+ 12) * FONT2_W+FONT2_W/2;
-	uint16_t y = Y_VALUES_START + FONT2_H * INFO;
+	uint16_t x = X_LEFT_EDGE + 16 * FONT2_W+FONT2_W/2;
+	uint16_t y = Y_VALUES_START + FONT2_H * VERSION;
 
 	if (ex_mode == online)
 	{
@@ -480,6 +492,8 @@ void displayTemPreVol(void){
 		}
 		if(xbee.netstat == NO_NETWORK){
 			paint_string_row(xbee_get_coordID(),CONN,0,"", red);
+			
+			LCD_conn_Stregth(1,xbee.RSSI,x, y, dark_red);
 		}
 	}
 
@@ -677,7 +691,7 @@ void I2C_Clear_view(uint8_t i2cState,uint8_t DS3231State, uint8_t BMPSate){
 	
 	#ifdef ili9341
 	sprintf(twiStr,"clearBUS:%d",i2cState);
-	paint_string_row_col("I2C Bus Recovery",INFO,0,white);
+	paint_string_row_col("I2C Bus Recovery",DATETIME,0,white);
 	paint_string_row(twiStr,VALUE,1,"",FGC);
 	
 	if (!DS3231State)
@@ -789,4 +803,10 @@ void reset_display(uint8_t clear)
 	#endif
 
 
+}
+
+void paint_Date(void){
+		sprintf(strBuff,"%02i.%02i.%04i ", Time.tm_mday,Time.tm_mon,Time.tm_year+2000);
+		paint_string_row_col(strBuff,DATETIME,0,FGC);
+		
 }
