@@ -1229,6 +1229,7 @@ uint8_t ping_server(void)
 		SET_ERROR(NETWORK_ERROR);
 		ex_mode = offline;
 		t_start(RECONNECT,options.Ping_Intervall*60);
+		paint_Date();
 		return 0;
 	}
 	else
@@ -1346,7 +1347,14 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 		newtime.tm_mon  = optBuffer[4];
 		newtime.tm_year = optBuffer[5];
 		
+		
+		
 		DS3231M_set_time(&newtime);
+		
+		_delay_ms(50);
+		
+		DS3231M_read_time();
+		
 	}
 	#ifdef DEBUG_DS3231M
 	
@@ -1804,6 +1812,7 @@ int main(void)
 	{
 		xbee_coordIdentifier(); // get name of connected Coordinator
 		reset_display(0);
+		paint_Date();
 		//MEASUREMENT BLOCK
 		if (connected.BMP){ // measurement is only done if T OR P compensation is enabled
 			if(BMP_Temp_and_Pressure()){
@@ -2027,7 +2036,7 @@ int main(void)
 		
 		if (t_check(I2C_CHECK))
 		{
-			t_start(I2C_CHECK,10);
+			t_start(I2C_CHECK,20);
 			
 			if(!connected.TWI || !connected.DS3231M || (!connected.BMP && connected.BMP_on_Startup) || CHECK_ERROR(I2C_BUS_ERROR))
 			{
@@ -2276,6 +2285,7 @@ int main(void)
 	ISR(TIMER1_COMPA_vect)
 	{
 		count_t_elapsed++;
+		system_tick();
 	}
 
 	ISR(INT2_vect)

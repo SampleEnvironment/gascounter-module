@@ -206,8 +206,8 @@ void paint_Main(void){
 	paint_string_row_col(strBuff,VERSION,0,FGC);
 	
 	if(Time.tm_year != 0){
-	sprintf(strBuff,"%02i.%02i.%04i ", Time.tm_mday,Time.tm_mon,Time.tm_year);
-	paint_string_row_col(strBuff,DATETIME,0,FGC);
+		sprintf(strBuff,"%02i.%02i.%04i ", Time.tm_mday,Time.tm_mon,Time.tm_year);
+		paint_string_row_col(strBuff,DATETIME,0,FGC);
 	}
 	
 	lcd_Print("Value :",X_LEFT_EDGE ,Y_VALUES_START + FONT2_H * VALUE  ,2,1,1,FGC,BGC);
@@ -453,20 +453,19 @@ void displayTemPreVol(void){
 	
 
 	
-	if (connected.TWI && connected.DS3231M)
-	{
-		sprintf(strBuff," %02i:%02i",Time.tm_hour, Time.tm_min);
-	}
-	else
-	{
-		sprintf(strBuff," NoI2C");
-	}
+
+
+	sprintf(strBuff," %02i:%02i",Time.tm_hour, Time.tm_min);
+
 	
 	strcat(indStr,strBuff);
-
-	paint_string_row_col(indStr,DATETIME,11, FGC);
-	
-
+	if (connected.TWI && connected.DS3231M)
+	{
+		paint_string_row_col(indStr,DATETIME,11, FGC);
+		
+		}else{
+		paint_string_row_col(indStr,DATETIME,11, orange);
+	}
 
 	
 	
@@ -806,7 +805,7 @@ void reset_display(uint8_t clear)
 }
 
 void paint_Date(void){
-		sprintf(strBuff,"%02i.%02i.%04i ", Time.tm_mday,Time.tm_mon,Time.tm_year+2000);
-		paint_string_row_col(strBuff,DATETIME,0,FGC);
-		
+	sprintf(strBuff,"%02i.%02i.%04i ", Time.tm_mday,Time.tm_mon,Time.tm_year+2000);
+	paint_string_row_col(strBuff,DATETIME,0,FGC);
+	
 }
