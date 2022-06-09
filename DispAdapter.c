@@ -329,7 +329,7 @@ void paint_send_stored_meas(uint8_t meas_in_Buffer, uint8_t max_Number, uint8_t 
 		
 		LCD_String("Sending Old",0,0);
 		LCD_String("Datasets",0,1);
-		LCD_String("Remaining:",0,2)
+		LCD_String("Remaining:",0,2);
 	}
 
 	
@@ -623,7 +623,7 @@ void displayTemPreVol(void){
 	}
 	else
 	{
-		sprintf(print_temp,"NoI2C");
+		sprintf(strBuff,"NoI2C");
 	}
 	
 
@@ -664,7 +664,7 @@ void displayTemPreVol(void){
 	
 	
 	#ifndef FUNCTION_TRACE
-	LCD_String("A:", 0, 0); // Value
+	//LCD_String("A:", 0, 0); // Value
 	#endif
 	
 	LCD_String("V:", 0, 1); // Volume
@@ -773,7 +773,7 @@ void reset_display(uint8_t clear)
 
 	
 
-	LCD_String("A:", 0, 0); // Value
+	//LCD_String("A:", 0, 0); // Value
 	LCD_String("V:", 0, 1); // Volume
 	LCD_String("C:", 0, 2); // CorrVolume
 	LCD_String("T:", 0, 3); // Temperature

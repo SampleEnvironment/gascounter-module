@@ -63,7 +63,7 @@ typedef struct {
 }InitScreenType;
 
 extern EWindowOrientation Orientation;
-
+extern char NetStat[3][6+1] ;
 
 
 
