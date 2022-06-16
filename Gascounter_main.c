@@ -405,6 +405,9 @@ void Collect_Measurement_Data(void){
 	if(BIT_CHECK(status_reset_on_send,I2C_BUS_ERROR)){BIT_SET(curr_Stat,status_bit_I2C_err_91);}
 	
 	
+	// network error is not reset on send/store
+	if(BIT_CHECK(get_status(),NETWORK_ERROR)){BIT_SET(curr_Stat,status_bit_Network_err_91);}
+	
 
 	
 	sendbuffer[22] = curr_Stat;
@@ -1514,7 +1517,7 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	options.Temperature_norm = optholder.Temperature_norm;
 	options.p_Compensation_enable = optholder.p_Compensation_enable;
 	options.Pressure_norm = optholder.Pressure_norm;
-	
+	options.Ping_Intervall = optholder.Ping_Intervall;
 	
 	old.Value = options.Value;
 	old.Volume = options.Volume;
@@ -1558,6 +1561,7 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 		}else{
 		CLEAR_ERROR(TEMPPRESS_ERROR);;
 	}
+
 	return ;
 }
 
@@ -1828,7 +1832,7 @@ int main(void)
 
 		if (CHECK_ERROR(NETWORK_ERROR))
 		{
-			sendbuffer[MEASUREMENT_MESSAGE_LENGTH-1]= 0; //delete Status byte
+			//sendbuffer[MEASUREMENT_MESSAGE_LENGTH-1]= 0; //delete Status byte
 			store_measurement();
 
 		}
@@ -1996,6 +2000,7 @@ int main(void)
 			
 
 			Collect_Measurement_Data();
+			
 			// reset cached error bits;
 			status_reset_on_send = 0;
 			if (CHECK_ERROR(NETWORK_ERROR))

@@ -307,7 +307,7 @@ extern uint8_t position_volume_dot_point;
 #define status_bit_Temp_Press_Err_91			3 /**< @brief Bit that indicates a problem with the BMP085 Sensor */
 #define status_bit_volume_too_big_91			4 /**< @brief Bit that indicates that an overflow has occourred in Value (#optType), Volume (#optType) or CorrVolume (#optType) */
 #define status_bit_DS3231M_err_91				5 /**< @brief Bit that indicates a problem with the DS3231M Chip */
-
+#define status_bit_Network_err_91				6 /**< @brief Bit that indicates a network error, (message was stored on device until connection was reestablished)*/
 
 
 
