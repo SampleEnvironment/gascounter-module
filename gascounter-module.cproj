@@ -136,7 +136,7 @@
       <Value>F_CPU=6144000</Value>
       <Value>GASCOUNTER_MODULE</Value>
       <Value>USE_XBEE</Value>
-      <Value>ili9341</Value>
+      <Value>GCM_old_disp</Value>
     </ListValues>
   </avrgcc.compiler.symbols.DefSymbols>
   <avrgcc.compiler.directories.IncludePaths>
@@ -328,6 +328,9 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="Gascounter_main.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="StringPixelCoordTabble_old.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="StringPixelCoordTable_ili9341.h">

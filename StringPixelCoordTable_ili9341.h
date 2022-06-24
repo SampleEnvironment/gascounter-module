@@ -98,3 +98,25 @@
 #define Y_PIL_90 290 // Buttons/edge
 
 
+
+
+
+// Strings
+
+#define STR_INIT_OFFLINE "Init Offline"
+#define STR_INIT_OFFLINE_MESSAGE "Network connection \ncould not be establishedon startup\n\nNetworkstatus:\n%s"
+#define STR_NO_COORDINATOR_FOUND "No Coordinator found"
+#define STR_NO_SERVER_FOUND "No Server found"
+
+#define STR_OPTIONS_LENGTH "Options Length"
+#define STR_OPTIONS_LENGTH_MESSAGE "The length of the recei-ved options buffer diff-ers from the expected\nlength.\n\nexpected: %i bytes\nreceived: %i bytes."
+
+#define STR_OPTION_RANGE_ERR "Option Range Err"
+#define STR_OPTION_RANGE_ERR_MESSAGE "One or more received\nparameters are out of\nbounds:\n"
+#define STR_RANGE_ERROR "%s\n received: %lu\n expected: [%lu..%lu]\n"
+
+#define STR_BMP_SENSOR_ERROR "BMP Sensor Error"
+#define STR_BMP_SENSOR_ERROR_MESSAGE "Temperature or Pressure compensation is set but the Temperature/PressureSensor did not initiali-ze.\n\n>check I2C Bus\n>check sensor connection"
+
+#define STR_RTC_ERROR "RTC ERROR"
+#define STR_RTC_ERROR_MESSAGE "The DS3231M real time\nclock chip did not\ninitialize properly\n\n>check I2C Bus"

@@ -26,6 +26,7 @@
 #ifdef GCM_old_disp
 
 #include "disp/gcm_old_lcd_driver.h"
+#include "StringPixelCoordTabble_old.h"
 #endif
 
 #ifdef ili9341
@@ -499,7 +500,7 @@ void displayTemPreVol(void){
 
 
 
-		
+	
 
 	
 	
@@ -814,4 +815,99 @@ void paint_Date(void){
 	sprintf(strBuff,"%02i.%02i.%04i ", Time.tm_mday,Time.tm_mon,Time.tm_year+2000);
 	paint_string_row_col(strBuff,DATETIME,0,FGC);
 	
+}
+
+//yes no dialog for Landscape
+//output a message with title and text
+//at last function waits for keypress
+void ErrMessage(char *title, char *text, unsigned int BackColor, unsigned int ForeColor)  {
+	#ifdef ili9341
+	
+	uint8_t x0,x,y,i,len;
+	
+	lcd_Cls(BackColor);
+
+	char temp[2];
+	temp[1] = '\0';
+
+	lcd_Box(20,70,220,300,ForeColor);
+	LCD_Print(title,120-(strlen(title)*FONT2_W/2),30,2,1,1,ForeColor,BackColor);
+	x0 = 22;
+
+	//for Landscape only
+	x = x0;
+	y = 75;
+
+
+	len = strlen(text);
+	for(i=0;i<len;i++)  {
+		if(text[i] != '\n')
+		{
+			temp[0] = text[i];
+			LCD_Print(temp,x,y,1,1,1,BackColor,ForeColor);
+			x += CHAR_CELL_WIDTH_FONT_1;
+			if(x >= 210)
+			{
+				if(y>=250)
+				break;
+				y += FONT1_H;
+				x = x0;
+				continue;
+			}
+		}
+		else  {
+			if(y >= 250)
+			break;
+			y += FONT1_H;
+			x = x0;
+			continue;
+		}
+	}
+	
+	_delay_ms(4000);
+	
+	#endif
+	#ifdef GCM_old_disp
+	uint8_t x0,x,y,i,len;
+	
+	lcd_Cls(BGC);
+	LCD_String(title,0,0);
+	
+	len = strlen(text);
+	
+	char temp[2];
+	temp[1] = '\0';
+	
+	x0 = 0;
+	x = 0;
+
+	y = 1;
+	for(i=0;i<len;i++)  {
+		if(text[i] != '\n')
+		{
+			temp[0] = text[i];
+			LCD_String(temp,x,y);
+			x ++;
+			if(x >= 12)
+			{
+				if(y>=6)
+				break;
+				y ++;
+				x = x0;
+				continue;
+			}
+		}
+		else  {
+			if(y >= 5)
+			break;
+			y ++;
+			x = x0;
+			continue;
+		}
+	}
+	
+	_delay_ms(4000);
+	
+	
+	#endif
 }

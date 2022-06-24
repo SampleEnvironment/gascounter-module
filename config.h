@@ -19,6 +19,8 @@
 
 #define BRANCH_ID 2
 
+#define HZB
+
 
 
 #endif /* CONFIG_H_ */

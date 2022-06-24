@@ -256,8 +256,38 @@ enum PARENT_MODE
 // Device status
 //==============================================================
 
+typedef struct
+{
+	
+	uint8_t boundsErrors[8];
+	uint8_t bound_err_counter;
+	
+	const char ** optStrings;
+	const uint32_t  optBounds[8][3];
+	uint32_t errorVal[8];
+	
+	int8_t opt_len_received;
+	
 
 
+}StartUpStatType;
+
+
+
+
+
+typedef enum 
+{
+	TRANS_MAX,
+	TRANS_MIN,
+	DELTA_V,
+	DELTA_P,
+	STEP_VOL,
+	TEMP_NORM,
+	PRESS_NORM,
+	PING_INT
+	
+}BOUNDS_TYPE;
 
 
 
@@ -374,6 +404,7 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer);
 void execute_server_CMDS(uint8_t reply_id);
 uint8_t ping_server(void);
 void Set_Options(uint8_t *optBuffer,uint8_t answer_code);
+uint32_t checkBounds(uint32_t var,BOUNDS_TYPE bounds,uint8_t * flag);
 //uint8_t analyze_Connection(void);
 
 #endif  // Gascounter_main.h

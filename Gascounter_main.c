@@ -45,6 +45,7 @@
 
 #ifdef GCM_old_disp
 #include "disp/gcm_old_lcd_driver.h"
+#include "StringPixelCoordTabble_old.h"
 #endif
 
 #include "I2C_utilities.h"
@@ -134,6 +135,38 @@ optType options = {.offsetValue = DEF_offsetValue,
 	.Temperature_value = 0,
 	.Pressure_value = 0
 	
+};
+
+
+const char* optStrings[] = {
+	"max. Interval (min)",
+	"min. Interval (s)",
+	"send at delta Volume",
+	"send at delta Pressure",
+	"Volume Step",
+	"Temperature Norm",
+	"Pressure Norm",
+	"Ping Interval"
+};
+
+
+
+
+StartUpStatType StartStat = {
+	.bound_err_counter = 0,
+	.optStrings = optStrings,
+	.optBounds =
+	{
+		{MIN_t_transmission_max,MAX_t_transmission_max,DEF_t_transmission_max},
+		{MIN_t_transmission_min,MAX_t_transmission_min,DEF_t_transmission_min},
+		{MIN_delta_V,MAX_delta_V,DEF_delta_V},
+		{MIN_delta_p,MAX_delta_p,DEF_delta_p},
+		{MIN_step_Volume,MAX_step_Volume,DEF_step_Volume},
+		{MIN_Temperature_norm,MAX_Temperature_norm,DEF_Temperature_norm},
+		{MIN_Pressure_norm,MAX_Pressure_norm,DEF_Pressure_norm},
+		{MIN_Ping_Intervall,MAX_Ping_Intervall,DEF_Ping_Intervall}
+	},
+	.opt_len_received = 0
 };
 
 /************************************************************************/
@@ -324,6 +357,8 @@ void Funtrace_enter(uint8_t Function_ID){
 
 
 }
+
+
 
 
 
@@ -895,7 +930,7 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer)
 	
 	// Try to send login message "number_trials" times
 	#ifdef USE_LAN
-	uint8_t number_trials = 10;
+	uint8_t number_trials = 2;
 	#endif
 	#ifdef USE_XBEE
 	uint8_t number_trials = 1;
@@ -904,9 +939,9 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer)
 	while(number_trials)
 	{
 		#ifdef USE_LAN
-		uint8_t sim_xb_rep;
-		sim_xb_rep  = xbee_hasReply(LAST_NON_CMD_MSG,GREATER_THAN);
-		if (sim_xb_rep != 0xFF && frameBuffer[sim_xb_rep].type == SIMULATE_XBEE_CMD){
+		uint8_t sim_xb_rep = 0xFF;
+		sim_xb_rep  = xbee_hasReply(CE_MSG_TYPE,EQUAL);
+		if (sim_xb_rep != 0xFF){
 			
 			
 			sendbuffer[0] = 1;
@@ -920,7 +955,9 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer)
 		buffer_removeData(sim_xb_rep);
 		#endif
 		
-		reply_Id = xbee_send_request_only(db_cmd_type, buffer, 1);
+		
+		reply_Id = xbee_send_request(db_cmd_type,buffer,1);
+		//reply_Id = xbee_send_request_only(db_cmd_type, buffer, 1);
 		
 		//#ifdef ALLOW_DEBUG
 		//sprintf(print_temp,"%i",reply_Id);
@@ -941,34 +978,25 @@ uint8_t xbee_send_login_msg(uint8_t db_cmd_type, uint8_t *buffer)
 			#endif
 			
 
-			_delay_ms(1000);
+			_delay_ms(500);
 			//sprintf(print_temp,"%i",frameBuffer[reply_Id].data_len);
 			//LCD_InitScreen_AddLine(print_temp,0);
+			
+			StartStat.opt_len_received =  frameBuffer[reply_Id].data_len ;
 			
 			if(frameBuffer[reply_Id].data_len == NUMBER_LOGIN_BYTES) {
 				return reply_Id;	//good options
 			}
 			else {
 				
-				//TODO Fix
-				lcd_Cls(BGC);
+				SET_ERROR(OPTIONS_ERROR);
+				SET_ERROR(OPTIONS_LEN_ERROR);
 				
-				#ifdef ili9341
-				Print_add_Line("Request Opts len false",1);
-				paint_Value(frameBuffer[reply_Id].data_len,VOLUME,1,3,"");
-				#endif
-				#ifdef GCM_old_disp
-				Print_add_Line("len false",0);
-				LCD_Value(frameBuffer[reply_Id].data_len,0,0,1,"num ");
-				#endif
-
-				
-
-				_delay_ms(5000);
-				_delay_ms(5000);
 				return 0xFF;  //bad options
 			}
 			
+			}else{
+			SET_ERROR(INIT_OFFLINE_ERROR);
 		}
 		
 		
@@ -1183,7 +1211,7 @@ void execute_server_CMDS(uint8_t reply_id){
 
 
 		#ifdef USE_LAN
-		case SIMULATE_XBEE_CMD:
+		case CE_MSG_TYPE:
 		
 		if (ex_mode == offline)
 		{
@@ -1196,6 +1224,14 @@ void execute_server_CMDS(uint8_t reply_id){
 		xbee_pseudo_send_AT_response( 'C', 'E', 0, sendbuffer, 1);
 		
 		break;
+		
+		case NI_MSG_TYPE:;
+		
+		uint8_t NI_len = frameBuffer[reply_id].data_len;
+		memcpy(xbee.CoordIdentifier,(char *)frameBuffer[reply_id].data,NI_len);
+		xbee.CoordIdentifier[NI_len] =  '\0';
+		
+		xbee_pseudo_send_AT_response( 'N', 'I', 0, sendbuffer, 0);
 		
 		#endif
 		
@@ -1261,62 +1297,26 @@ uint8_t ping_server(void)
 
 
 
-/**
-* @brief Checks current Connection Status. Possible states are "No Network" if no connection to a coordinator could be established. "No Server", if the Device is connected to a coordinator but, pings sent by #ping_server() are not answered. And "Online" if pings are answered by the server. The State is saved in #NetStatIndex
-*
-*
-* @return uint8_t 1 if online and 0 if there are any problems with the connection to the server
-*/
-/*
-uint8_t analyze_Connection(void)
-{
-FUNCTION_TRACE
-Funtrace_enter(9);
 
-#ifdef USE_XBEE
-
-
-if (!xbee_reconnect(0))
-{
-//Associated
-ex_mode = online;
-CLEAR_ERROR(NETWORK_ERROR);
-
-CLEAR_ERROR(NO_REPLY_ERROR);
-
-xbee_coordIdentifier();
-
-if(!ping_server()){
-paint_info_line("NoServ",0);
-NetStatIndex = 2;
-return 0;
-}
-else{
-ex_mode = online;
-CLEAR_ERROR(NETWORK_ERROR);;
-CLEAR_ERROR(NO_REPLY_ERROR);;
-return 1;
+uint32_t checkBounds(uint32_t var,BOUNDS_TYPE BoundVar,uint8_t * flag){
+	uint32_t min = StartStat.optBounds[BoundVar][0];
+	uint32_t max = StartStat.optBounds[BoundVar][1];
+	uint32_t def = StartStat.optBounds[BoundVar][2];
+	if((var < min) || (var > max || isnan(var))){
+		StartStat.errorVal[StartStat.bound_err_counter] = var;
+		var = def;
+		*flag = 1;
+		StartStat.boundsErrors[StartStat.bound_err_counter] = BoundVar;
+		StartStat.bound_err_counter++;
+	}
+	return var;
+	
 }
 
-}
-else
-{
 
-paint_info_line("NoNetw",0);
-NetStatIndex = 1;
-return 0;
 
-}
-#endif
-#ifdef USE_LAN
-paint_info_line("NoServ",0);
-NetStatIndex = 2;
-return 0;
 
-#endif
-}
 
-*/
 
 /**
 * @brief Receives new options in #buffer and validates them. The validity of the options is reported back to the Server via a #OPTIONS_SET_ACK Message containing the status#byte_93.
@@ -1441,22 +1441,7 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	
 
 	
-	#ifdef DEBUG_OPTIONS
-	Print_add_Line("Options",1);
-	_delay_ms(1000);
-	LCD_Value(optholder.t_transmission_max, 0, 0, 0, NULL);
-	_delay_ms(1000);
-	LCD_Value(optholder.delta_V, 0, 0, 1, NULL);
-	_delay_ms(5000);
-	LCD_Value(optholder.step_Volume, 0, 6, 1, NULL);
-	_delay_ms(1000);
-	LCD_Value(optholder.delta_p, 0, 0, 2, NULL);
-	_delay_ms(1000);
-	LCD_Value(optholder.Temperature_norm, 0, 0, 4, NULL);
-	_delay_ms(1000);
-	LCD_Value(optholder.Pressure_norm, 0, 0, 5, NULL);
-	_delay_ms(1000);
-	#endif
+	
 	
 	// check Option Validity
 	if( (0 == optholder.t_transmission_max)||
@@ -1474,19 +1459,23 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 	}
 	
 	//checking bounds
-	CHECK_BOUNDS(optholder.t_transmission_max,MIN_t_transmission_max,MAX_t_transmission_max,DEF_t_transmission_max,outofBundsFlag);
-	CHECK_BOUNDS(optholder.t_transmission_min,MIN_t_transmission_min,MAX_t_transmission_min,DEF_t_transmission_min,outofBundsFlag);
-	CHECK_BOUNDS(optholder.delta_V,MIN_delta_V,MAX_delta_V,DEF_delta_V,outofBundsFlag);
-	CHECK_BOUNDS(optholder.delta_p,MIN_delta_p,MAX_delta_p,DEF_delta_p,outofBundsFlag);
-	CHECK_BOUNDS(optholder.step_Volume,MIN_step_Volume,MAX_step_Volume,DEF_step_Volume,outofBundsFlag);
-	CHECK_BOUNDS(optholder.Temperature_norm,MIN_Temperature_norm,MAX_Temperature_norm,DEF_Temperature_norm,outofBundsFlag);
-	CHECK_BOUNDS(optholder.Pressure_norm,MIN_Pressure_norm,MAX_Pressure_norm,DEF_Pressure_norm,outofBundsFlag);
-	CHECK_BOUNDS(optholder.Ping_Intervall,MIN_Ping_Intervall,MAX_Ping_Intervall,DEF_Ping_Intervall,outofBundsFlag);
+
+	optholder.t_transmission_max = (uint16_t)checkBounds(optholder.t_transmission_max,TRANS_MAX,&outofBundsFlag);
+	optholder.t_transmission_min = (uint16_t)checkBounds(optholder.t_transmission_min,TRANS_MIN,&outofBundsFlag);
+	optholder.delta_V = (uint32_t)checkBounds(optholder.delta_V,DELTA_V,&outofBundsFlag);
+	optholder.delta_p= (uint16_t)checkBounds(optholder.delta_p,DELTA_P,&outofBundsFlag);
+	optholder.step_Volume= (uint32_t)checkBounds(optholder.step_Volume,STEP_VOL,&outofBundsFlag);
+	optholder.Temperature_norm= (uint16_t)checkBounds(optholder.Temperature_norm,TEMP_NORM,&outofBundsFlag);
+	optholder.Pressure_norm= (uint16_t)checkBounds(optholder.Pressure_norm,PRESS_NORM,&outofBundsFlag);
+	optholder.Ping_Intervall= (uint8_t)checkBounds(optholder.Ping_Intervall,PING_INT,&outofBundsFlag);
+
 
 	if (outofBundsFlag)
 	{
+		
 		BIT_SET(sendbuffer[0],status_bit_success_setting_options_93);  // not successfully accepted
 		SET_ERROR(OPTIONS_ERROR);
+		SET_ERROR(OPTIONS_OUT_OF_BOUNDS_ERROR);
 		xbee_send_message(answer_code,sendbuffer,1);
 
 		return ;
@@ -1541,9 +1530,9 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 		position_volume_dot_point = 3;
 	}
 	
-	#ifdef USE_DISPLAY
-	reset_display(1);
-	#endif
+
+
+
 	
 
 	CLEAR_ERROR(OPTIONS_ERROR);;
@@ -1671,8 +1660,8 @@ int main(void)
 			break;			//stop trying on timeout return bad reply
 		}
 		
-		sim_xb_rep  = xbee_hasReply(LAST_NON_CMD_MSG,GREATER_THAN);
-		if (sim_xb_rep != 0xFF && frameBuffer[sim_xb_rep].type == SIMULATE_XBEE_CMD){
+		sim_xb_rep  = xbee_hasReply(CE_MSG_TYPE,EQUAL);
+		if (sim_xb_rep != 0xFF ){
 			CoordActive = 1;
 			
 			sendbuffer[0] = 1;
@@ -1709,9 +1698,10 @@ int main(void)
 	#ifdef USE_XBEE
 	// set default sc mask
 	xbee_Set_Scan_Channels(xbee.ScanChannels);
+	xbee_WR();
 	
-	sprintf(print_temp,"SC:%#04x",xbee_Scan_Channels());
-	Print_add_Line(print_temp,2);
+	//sprintf(print_temp,"SC:%#04x",xbee_Scan_Channels());
+	//Print_add_Line(print_temp,2);
 
 	if(xbee_reset_connection(0))
 	{
@@ -1746,11 +1736,7 @@ int main(void)
 				if (reply_id!= 0xFF ){ // GOOD OPTIONS RECEIVED
 					Set_Options((uint8_t*)frameBuffer[reply_id].data,OPTIONS_SET_ACK);
 				}
-				else // DEFECTIVE OPTIONS RECEIVED
-				{
-					SET_ERROR(OPTIONS_ERROR);
-					SET_ERROR(INIT_OFFLINE_ERROR);
-				}
+
 				
 			}
 			else
@@ -1768,6 +1754,7 @@ int main(void)
 	{
 		Print_add_Line("...failed!",0);
 		Print_add_Line("offline mode",0);
+		xbee.netstat = NO_NETWORK;
 		SET_ERROR(INIT_OFFLINE_ERROR);
 
 	} // end of if(ex_errorCode != ex_errorCode_Offline)
@@ -1783,39 +1770,68 @@ int main(void)
 	{
 		while (1)
 		{
-			lcd_Cls(BGC);
-			Print_add_Line("Errors:",1);
-			_delay_ms(2000);
+			char errString[300];
 			//==============================================
 			//Initially Offline
 			if(CHECK_ERROR(INIT_OFFLINE_ERROR)){
-				Print_add_Line("Init Offline",0);
-				_delay_ms(2000);
+				
+				
+				sprintf(errString,STR_INIT_OFFLINE_MESSAGE,(xbee.netstat == NO_NETWORK)?STR_NO_COORDINATOR_FOUND:STR_NO_SERVER_FOUND);
+
+				
+				ErrMessage(STR_INIT_OFFLINE,errString,blue,white);
+				
+				
 			}
 			//==============================================
 			//Faulty Options Received
 			if(CHECK_ERROR(OPTIONS_ERROR)){
-				Print_add_Line("Faulty Opts.",0);
-				_delay_ms(2000);
+				if (CHECK_ERROR(OPTIONS_LEN_ERROR))
+				{
+					sprintf(errString,STR_OPTIONS_LENGTH_MESSAGE,NUMBER_LOGIN_BYTES,StartStat.opt_len_received);
+					
+					ErrMessage(STR_OPTIONS_LENGTH,errString,blue,white);
+				}
+				
+				
+				if(CHECK_ERROR(OPTIONS_OUT_OF_BOUNDS_ERROR)){
+					sprintf(errString,STR_OPTION_RANGE_ERR_MESSAGE);
+					
+					char boundsstr[100];
+					for(uint8_t i = 0;i < StartStat.bound_err_counter; i++ ){
+						uint8_t errVal = StartStat.boundsErrors[i];
+		
+						
+						sprintf(boundsstr,STR_RANGE_ERROR,
+						StartStat.optStrings[errVal],
+						StartStat.errorVal[errVal],
+						StartStat.optBounds[errVal][0],
+						StartStat.optBounds[errVal][1]);
+						strcat(errString,boundsstr);
+					}
+					
+					ErrMessage(STR_OPTION_RANGE_ERR,errString,blue,white);
+				}
+				
 			}
 			//==============================================
 			//BMP or DS3231M error
 			if (CHECK_ERROR(TEMPPRESS_ERROR) )
 			{
-				Print_add_Line("BMP Error",0);
-				_delay_ms(2000);
+				
+				ErrMessage(STR_BMP_SENSOR_ERROR,STR_BMP_SENSOR_ERROR_MESSAGE,blue,white);
 			}
 			if (CHECK_ERROR(TIMER_ERROR))
 			{
-				Print_add_Line("DS3231M Err",0);
-				_delay_ms(2000);
+				ErrMessage(STR_RTC_ERROR,STR_RTC_ERROR_MESSAGE,blue,white);
+
 			}
 		}
 	}else  // One measure send cycle on startup
 
 	{
 		xbee_coordIdentifier(); // get name of connected Coordinator
-		reset_display(0);
+		reset_display(1);
 		paint_Date();
 		//MEASUREMENT BLOCK
 		if (connected.BMP){ // measurement is only done if T OR P compensation is enabled
