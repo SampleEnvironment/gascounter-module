@@ -315,7 +315,7 @@ extern enum PARENT_MODE ex_mode;
 extern uint16_t status_reset_on_send;
 extern optType options;
 extern uint8_t position_volume_dot_point;
-
+extern char AT_Lut[22] [2];
 // I²C Codes
 
 #define DEVICE_NOT_CONNECTED 2

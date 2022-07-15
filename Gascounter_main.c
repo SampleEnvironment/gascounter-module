@@ -48,6 +48,10 @@
 #include "StringPixelCoordTabble_old.h"
 #endif
 
+#ifdef ili9341
+#include "StringPixelCoordTable_ili9341.h"
+#endif
+
 #include "I2C_utilities.h"
 #include "module_globals.h"
 #include "adwandler.h"
@@ -531,11 +535,11 @@ void init(void)
 
 	#ifdef ili9341
 	setInitScreen(black,white,6,1,1,1);
-	Print_add_Line("HZB Gascount",0);
+	Print_add_Line(STR_HZB_GASCOUNTER,0);
 	#endif
 	
 	#ifdef GCM_old_disp
-	Print_add_Line("HZB Gascount",1);
+	Print_add_Line(STR_HZB_GASCOUNTER,1);
 	#endif
 
 
@@ -544,34 +548,34 @@ void init(void)
 	sprintf(print_temp,"v%i.%i",version.Branch_id,version.Fw_version);
 	Print_add_Line(print_temp,0);
 	#ifdef USE_LAN
-	Print_add_Line("LAN-VARIANT",0);
+	Print_add_Line(STR_LAN_VARIANT,0);
 	#endif
 	#ifdef USE_XBEE
-	Print_add_Line("XBEE-VARIANT",0);
+	Print_add_Line(STR_XBEE_VARIANT,0);
 	#endif
 	
 
 	
 	
 	#ifdef ili9341
-	Print_add_Line("Init start",0);
+	Print_add_Line(STR_INIT_START,0);
 	#endif
 	
 	#ifdef GCM_old_disp
 	_delay_ms(2000); // the delay is for the xbee to start when the system is plugged in
-	Print_add_Line("Init start",1);
+	Print_add_Line(STR_INIT_START,1);
 	#endif
 
 
-	Print_add_Line("Init ports",2);
+	Print_add_Line(STR_INIT_PORTS,2);
 	
-	Print_add_Line("Init timer",2);
+	Print_add_Line(STR_INIT_TIMER,2);
 	init_timer();
-	Print_add_Line("Init interr.",2);
+	Print_add_Line(STR_INIT_INTERRUPTS,2);
 	init_interrupts();
-	Print_add_Line("Init usart",2);
+	Print_add_Line(STR_INIT_USART,2);
 	usart_init(39);
-	Print_add_Line("Init I2C",2);
+	Print_add_Line(STR_INIT_I2C,2);
 	i2c_init();
 
 
@@ -590,16 +594,16 @@ void init(void)
 
 
 	// Timer
-	Print_add_Line("Init Clock",2);
+	Print_add_Line(STR_INIT_CLOCK,2);
 
 	if (init_DS3231M(&paint_info_line) == 0) // trying to connect with DS3231M (time)
 	{
 		connected.DS3231M = 1;
 		#ifdef ili9341
-		Print_add_Line("Init Clock  ...success",2);
+		Print_add_Line(STR_INIT_CLOCK_SUCC,2);
 		#endif
 		#ifdef GCM_old_disp
-		Print_add_Line("...success",0);
+		Print_add_Line(STR_INIT_CLOCK_SUCC,0);
 		#endif
 
 	}
@@ -608,25 +612,25 @@ void init(void)
 		connected.DS3231M = 0;
 		SET_ERROR(TIMER_ERROR);
 		#ifdef ili9341
-		Print_add_Line("Init Clock  ...error",2);
+		Print_add_Line(STR_INIT_CLOCK_ERR,2);
 		#endif
 		#ifdef GCM_old_disp
-		Print_add_Line("...error",0);
+		Print_add_Line(STR_INIT_CLOCK_ERR,0);
 		#endif
 	}
 
 	// Pressure and Temperature Sensor
-	Print_add_Line("Init Press",0);
+	Print_add_Line(STR_INIT_PRESS,0);
 	
 	if (init_BMP(&paint_info_line) == 0) // trying to connect with BMP
 	{
 		connected.BMP = 1;
 		connected.BMP_on_Startup = 1;
 		#ifdef ili9341
-		Print_add_Line("Init Press  ...success",2);
+		Print_add_Line(STR_INIT_PRESS_SUCC,2);
 		#endif
 		#ifdef GCM_old_disp
-		Print_add_Line("...success",0);
+		Print_add_Line(STR_INIT_PRESS_SUCC,0);
 		#endif
 		CLEAR_ERROR(TEMPPRESS_ERROR);;
 	}
@@ -646,7 +650,7 @@ void init(void)
 	xbee_init(&paint_info_line,NULL,0);
 	
 	xbee_hardware_version();
-	Print_add_Line("Init done",0);
+	Print_add_Line(STR_INIT_DONE,0);
 	
 
 	
@@ -1233,6 +1237,25 @@ void execute_server_CMDS(uint8_t reply_id){
 		
 		xbee_pseudo_send_AT_response( 'N', 'I', 0, sendbuffer, 0);
 		
+		default:;
+		uint8_t AT_Code = frameBuffer[reply_id].type;
+		
+		
+		// handle unknown AT command
+		if (AT_Code >= 200)
+		{
+			
+			
+			xbee_pseudo_send_AT_response( 
+				AT_Lut[(uint8_t)(AT_Code-AT_START)][0], // translate AT_code back to At ASCII chars
+				AT_Lut[(uint8_t)(AT_Code-AT_START)][1],
+				1, // Status == 1 --> atcommand not known
+				sendbuffer,
+				0); // empty payload
+		}
+		
+		break;
+		
 		#endif
 		
 	}
@@ -1392,9 +1415,7 @@ void Set_Options(uint8_t *optBuffer,uint8_t answer_code){
 		.delta_V =				 (((uint32_t) optBuffer[22] << 8) | optBuffer[23])* 1000 ,
 		.delta_p =				 ((uint16_t) optBuffer[24] << 8) | optBuffer[25],
 		.step_Volume =			 (((uint32_t) optBuffer[26] << 8) | optBuffer[27])* 1000 ,
-		//.offset_pressure =		 ((int16_t) optBuffer[28] << 8) | optBuffer[29], // the value is transmitted with +32768 because no negative numbers can be transmitted
-		//.span_pressure =		 ((uint16_t) optBuffer[30] << 8) | optBuffer[31],
-		.T_Compensation_enable =  optBuffer[28], //TODO Decrease bytenum by 4...
+		.T_Compensation_enable =  optBuffer[28],
 		.Temperature_norm =      ((uint16_t) optBuffer[29] << 8) | optBuffer[30] ,
 		.p_Compensation_enable =  optBuffer[31] ,
 		.Pressure_norm =         ((uint16_t) optBuffer[32] << 8) | optBuffer[33],

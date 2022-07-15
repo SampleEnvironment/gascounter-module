@@ -97,7 +97,22 @@
 #define X_PIL_2 20		 // Info line Directly above Progress-Bar and to the right of
 #define Y_PIL_90 290 // Buttons/edge
 
-
+// INIT STRINGS
+#define STR_HZB_GASCOUNTER "HZB Gascounter-Module"
+#define STR_LAN_VARIANT "LAN-VARIANT"
+#define STR_XBEE_VARIANT "XBEE-VARIANT"
+#define STR_INIT_START "Init start"
+#define STR_INIT_PORTS "Init I/O-ports"
+#define STR_INIT_TIMER "Init MCU-timers"
+#define STR_INIT_INTERRUPTS "Init interrpts"
+#define STR_INIT_USART "Init USART"
+#define STR_INIT_I2C "Init I2C-BUS"
+#define STR_INIT_CLOCK "Init DS3231M RTC"
+#define STR_INIT_CLOCK_SUCC "Init DS3231M RTC  ...success"
+#define STR_INIT_CLOCK_ERR "Init DS3231M RTC  ...error"
+#define STR_INIT_PRESS "Init BMP085"
+#define STR_INIT_PRESS_SUCC "Init BMP085  ...success"
+#define STR_INIT_DONE "Init done"
 
 
 
