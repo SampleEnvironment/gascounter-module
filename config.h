@@ -15,7 +15,7 @@
 //#define old_LCD 
 
 
-#define FIRMWARE_VERSION  211 /**< @brief  Software Version  */
+#define FIRMWARE_VERSION  212 /**< @brief  Software Version  */
 
 #define BRANCH_ID 2
 
