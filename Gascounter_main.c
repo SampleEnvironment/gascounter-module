@@ -45,7 +45,7 @@
 
 #ifdef GCM_old_disp
 #include "disp/gcm_old_lcd_driver.h"
-#include "StringPixelCoordTabble_old.h"
+#include "StringPixelCoordTable_old.h"
 #endif
 
 #ifdef ili9341
