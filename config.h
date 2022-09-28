@@ -11,13 +11,18 @@
 
 
 // Display Version:
-//#define ili9341
-//#define old_LCD 
+#define ili9341
+//#define GCM_old_disp 
+
+// Network Hardware
+#define USE_XBEE
+//#define USE_LAN
 
 
 #define FIRMWARE_VERSION  212 /**< @brief  Software Version  */
 
 #define BRANCH_ID 2
+
 
 #define HZB
 
