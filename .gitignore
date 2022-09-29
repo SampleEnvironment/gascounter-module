@@ -1,2 +1,12 @@
-Debug/
-.vs/
+.vs/*
+
+
+*.d
+*.o
+*.eep
+*.hex
+*.lss
+*.map
+*.srec
+*.mk
+Makefile

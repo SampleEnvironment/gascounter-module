@@ -11,11 +11,11 @@
 
 
 // Display Version:
-#define ili9341
+//#define ili9341
 //#define GCM_old_disp 
 
 // Network Hardware
-#define USE_XBEE
+//#define USE_XBEE
 //#define USE_LAN
 
 
