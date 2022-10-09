@@ -108,7 +108,7 @@ deltaType delta = {.Volume_since_last_send = 0,.Pressure_since_last_send = 0,.t_
 *
 * Timestamps and Pressurevalues for last send/display-reset/ping - Event
 */
-lastType last= {.Pressure_on_send = 0,.time_send = 0,.time_display_reset = 0, .time_Pressure_Temp_meas = 0,.time_valid_time_reading = 0};
+lastType last= {.Pressure_on_send = 0,.time_send = 0,.time_display_reset = 0, .time_Pressure_Temp_meas = 0,.time_valid_time_reading = 0, .Status_on_Send = 0};
 
 
 
@@ -447,6 +447,8 @@ void Collect_Measurement_Data(void){
 	// network error is not reset on send/store
 	if(BIT_CHECK(get_status(),NETWORK_ERROR)){BIT_SET(curr_Stat,status_bit_Network_err_91);}
 	
+	
+	last.Status_on_Send = status_reset_on_send;
 
 	
 	sendbuffer[22] = curr_Stat;
@@ -2031,10 +2033,11 @@ int main(void)
 		if((delta.t_send >= options.t_transmission_max * 60)|| //
 		(delta.t_send >= options.t_transmission_min && delta.Volume_since_last_send > options.delta_V)||
 		(delta.t_send >= options.t_transmission_min && delta.Pressure_since_last_send > options.delta_p)||
-		(delta.t_send >= options.t_transmission_min && status_reset_on_send) )
+		(delta.t_send >= options.t_transmission_min && status_reset_on_send && status_reset_on_send != last.Status_on_Send) )
 		{
 
-			
+
+						
 
 			Collect_Measurement_Data();
 			
