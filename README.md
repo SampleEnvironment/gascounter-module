@@ -14,7 +14,7 @@ In order to start developing/testing/flashing Firmware you will need:
 ### Preparations
 Before first compiling the project in Microchip Studio the submodule of the avr-library needs to be initialized:
 ```
-git submodule uptate --init
+git submodule update --init
 ```
 
 
