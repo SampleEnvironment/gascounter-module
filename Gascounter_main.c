@@ -327,7 +327,8 @@ uint8_t EEMEM Fun_trace_array[FUNTRACE_ARRAY_SIZE+FUNTRACE_HEADER_LEN];  //eepro
 
 uint16_t EEMEM funtrace_was_activated; //word in eeprom to indicate that funtrace was activated
 
-
+uint16_t EEMEM eeSC_mask;
+uint8_t  EEMEM eeSC_already_sent_from_server;
 
 
 
@@ -649,7 +650,16 @@ void init(void)
 	}
 	
 	
-	xbee_init(&paint_info_line,NULL,0);
+	uint16_t SC_mask = eeprom_read_word(&eeSC_mask);
+	uint8_t SC_aleady_sent_from_server = eeprom_read_byte(&eeSC_already_sent_from_server);
+	
+	if(SC_aleady_sent_from_server == SC_already_received_Pattern){
+		xbee_init(&paint_info_line,NULL,0,SC_mask);
+	}else
+	{
+		xbee_init(&paint_info_line,NULL,0,SC_MASK_DEFAULT);	
+	}
+
 	
 	xbee_hardware_version();
 	Print_add_Line(STR_INIT_DONE,0);
@@ -1213,7 +1223,29 @@ void execute_server_CMDS(uint8_t reply_id){
 		sendbuffer[0] = 0;
 		xbee_send_message(SET_PING_INTERVALL_CMD,sendbuffer,1);
 		break;
+		
+		case SET_SC_XBEE_MASK:;
+		uint16_t SC_mask = (frameBuffer[reply_id].data[0]<<8) + frameBuffer[reply_id].data[1];
 
+		
+		// write new sc mask to eeprom
+		eeprom_update_word(&eeSC_mask, SC_mask);
+		eeprom_update_byte(&eeSC_already_sent_from_server,SC_already_received_Pattern);
+		
+		//refresh xbee  parameters
+		
+		xbee_init(&paint_info_line,NULL,0,SC_mask);
+		xbee_Set_Scan_Channels(xbee.ScanChannels);
+		xbee_WR();
+		
+		//Send Status Ack
+		sendbuffer[0] = 0;
+		xbee_send_message(SET_SC_XBEE_MASK,sendbuffer,1);
+		
+		
+		
+		
+		break;
 
 
 		#ifdef USE_LAN
@@ -1248,12 +1280,12 @@ void execute_server_CMDS(uint8_t reply_id){
 		{
 			
 			
-			xbee_pseudo_send_AT_response( 
-				AT_Lut[(uint8_t)(AT_Code-AT_START)][0], // translate AT_code back to At ASCII chars
-				AT_Lut[(uint8_t)(AT_Code-AT_START)][1],
-				1, // Status == 1 --> atcommand not known
-				sendbuffer,
-				0); // empty payload
+			xbee_pseudo_send_AT_response(
+			AT_Lut[(uint8_t)(AT_Code-AT_START)][0], // translate AT_code back to At ASCII chars
+			AT_Lut[(uint8_t)(AT_Code-AT_START)][1],
+			1, // Status == 1 --> atcommand not known
+			sendbuffer,
+			0); // empty payload
 		}
 		
 		break;
@@ -1823,7 +1855,7 @@ int main(void)
 					char boundsstr[100];
 					for(uint8_t i = 0;i < StartStat.bound_err_counter; i++ ){
 						uint8_t errVal = StartStat.boundsErrors[i];
-		
+						
 						
 						sprintf(boundsstr,STR_RANGE_ERROR,
 						StartStat.optStrings[errVal],
@@ -2037,7 +2069,7 @@ int main(void)
 		{
 
 
-						
+			
 
 			Collect_Measurement_Data();
 			

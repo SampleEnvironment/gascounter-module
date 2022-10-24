@@ -19,7 +19,7 @@
 //#define USE_LAN
 
 
-#define FIRMWARE_VERSION  212 /**< @brief  Software Version  */
+#define FIRMWARE_VERSION  213 /**< @brief  Software Version  */
 
 #define BRANCH_ID 2
 
