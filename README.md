@@ -17,10 +17,17 @@ Before first compiling the project in Microchip Studio the submodule of the avr-
 git submodule update --init
 ```
 
-### Build configurations:
+### Choosing a Release
+In order to generate a executable Firmware of a specific release, `git tag` will list all available releases and 
+```git checkout --recurse-submodules vX.XXX``` 
+will load the release specified by `vX.XXX` (for example `v2.213`).
 
-Buildconfigurations have the following Format:
-```'DisplayType'-'NetworkInterface'```
+### Build configurations (from v2.212):
+Build configurations are used to generate firmware binarys that are meant for the same device Type, but with varying Hardware, for example the display that is used. Build configuration names for gascounter modules have the following Format `'DisplayType'-'NetworkInterface'`, and can be set via the dropdown menu depicted in the screenshot below.
+
+![build_configurations](https://user-images.githubusercontent.com/85115389/198265129-1811f6dd-a333-4995-9eb3-8800d6aded16.png)
+
+
 
 | Display Type | Description                                            |
 |--------------|--------------------------------------------------------|
