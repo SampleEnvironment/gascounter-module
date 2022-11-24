@@ -31,7 +31,7 @@ Build configurations are used to generate firmware binarys that are meant for th
 
 | Display Type | Description                                            |
 |--------------|--------------------------------------------------------|
-| GCM_old_disp | old bw LCD display with low resolution                 |
+| GCM_old_disp | old LC-display with low resolution                     |
 | ili9341      | Newer 2.2" rgb Display with a resolution of 240x320px  |
 
 | Network Interface | Description                                                                                             |
