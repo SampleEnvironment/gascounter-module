@@ -586,7 +586,13 @@ void displayTemPreVol(void){
 	if (!(options.T_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
 	{
 		LCD_Clear_row_from_column(2, 3);
-		LCD_Value((int32_t) options.Temperature_value - 2732, 1, 2, 3, "°C");
+		
+		if (!options.T_Compensation_enable && !connected.BMP)
+		{
+			LCD_String("/",3,3);
+			}else{
+			LCD_Value((int32_t) options.Temperature_value - 2732, 1, 2, 3, "°C");
+		}
 	}
 	else{
 		LCD_Clear_row_from_column(2, 3);
@@ -598,7 +604,12 @@ void displayTemPreVol(void){
 	if(!(options.p_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
 	{
 		LCD_Clear_row_from_column(2, 4);
-		LCD_Value(options.Pressure_value, 1, 2, 4, "mbar");
+		if (!options.p_Compensation_enable && !connected.BMP)
+		{
+			LCD_String("/",3,4);
+			}else{
+			LCD_Value(options.Pressure_value, 1, 2, 4, "mbar");
+		}
 	}
 	else{
 		LCD_Clear_row_from_column(2, 3);
