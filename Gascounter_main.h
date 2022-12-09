@@ -36,6 +36,7 @@
 #define MEASUREMENT_MESSAGE_LENGTH 23  /**< @brief Number of Bytes that makes up one Measurement Message*/
 #define NUMBER_LOGIN_BYTES	    36     /**< @brief Number of Bytes in login Message from Server   */
 
+#define WAITTIME_COORDINATOR_ACTIVATION 300
 //#define COM_TIMEOUT_TIME 		10	/**< @brief Communication Timeout-period in Seconds  */
 
 
@@ -148,6 +149,7 @@ typedef struct {
 * Absolute Times/Pressure of the last time an action was executetd i.e: Pinging the Server
 */
 typedef struct {
+	uint16_t Status_on_Send;
 	uint32_t Pressure_on_send;         /**< @brief Pressure the last time Data was sent/stored to the Server/memory (in 0.1 mbar)*/
 	uint32_t time_send;				   /**< @brief Absolute time of last sending of Data*/
 	uint32_t time_display_reset;       /**< @brief Absolute time of last Display Reset*/

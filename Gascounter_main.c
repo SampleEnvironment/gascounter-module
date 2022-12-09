@@ -45,7 +45,7 @@
 
 #ifdef GCM_old_disp
 #include "disp/gcm_old_lcd_driver.h"
-#include "StringPixelCoordTabble_old.h"
+#include "StringPixelCoordTable_old.h"
 #endif
 
 #ifdef ili9341
@@ -108,7 +108,7 @@ deltaType delta = {.Volume_since_last_send = 0,.Pressure_since_last_send = 0,.t_
 *
 * Timestamps and Pressurevalues for last send/display-reset/ping - Event
 */
-lastType last= {.Pressure_on_send = 0,.time_send = 0,.time_display_reset = 0, .time_Pressure_Temp_meas = 0,.time_valid_time_reading = 0};
+lastType last= {.Pressure_on_send = 0,.time_send = 0,.time_display_reset = 0, .time_Pressure_Temp_meas = 0,.time_valid_time_reading = 0, .Status_on_Send = 0};
 
 
 
@@ -327,7 +327,8 @@ uint8_t EEMEM Fun_trace_array[FUNTRACE_ARRAY_SIZE+FUNTRACE_HEADER_LEN];  //eepro
 
 uint16_t EEMEM funtrace_was_activated; //word in eeprom to indicate that funtrace was activated
 
-
+uint16_t EEMEM eeSC_mask;
+uint8_t  EEMEM eeSC_already_sent_from_server;
 
 
 
@@ -447,6 +448,8 @@ void Collect_Measurement_Data(void){
 	// network error is not reset on send/store
 	if(BIT_CHECK(get_status(),NETWORK_ERROR)){BIT_SET(curr_Stat,status_bit_Network_err_91);}
 	
+	
+	last.Status_on_Send = status_reset_on_send;
 
 	
 	sendbuffer[22] = curr_Stat;
@@ -636,18 +639,32 @@ void init(void)
 	}
 	else
 	{
-		
+		#ifdef ili9341
+		Print_add_Line(STR_INIT_PRESS_ERR,2);
+		#endif
+		#ifdef GCM_old_disp
+		Print_add_Line(STR_INIT_PRESS_ERR,0);
+		#endif
 		connected.BMP = 0;
 		connected.BMP_on_Startup = 0;
 		connected.TWI = 1;
 		BMP_Temperature = 0;
 		BMP_Pressure = 0;
-		Print_add_Line(" ",0);
+		//Print_add_Line(" ",0);
 
 	}
 	
 	
-	xbee_init(&paint_info_line,NULL,0);
+	uint16_t SC_mask = eeprom_read_word(&eeSC_mask);
+	uint8_t SC_aleady_sent_from_server = eeprom_read_byte(&eeSC_already_sent_from_server);
+	
+	if(SC_aleady_sent_from_server == SC_already_received_Pattern){
+		xbee_init(&paint_info_line,NULL,0,SC_mask);
+	}else
+	{
+		xbee_init(&paint_info_line,NULL,0,SC_MASK_DEFAULT);
+	}
+
 	
 	xbee_hardware_version();
 	Print_add_Line(STR_INIT_DONE,0);
@@ -1211,7 +1228,43 @@ void execute_server_CMDS(uint8_t reply_id){
 		sendbuffer[0] = 0;
 		xbee_send_message(SET_PING_INTERVALL_CMD,sendbuffer,1);
 		break;
+		
+		case SET_SC_XBEE_MASK:;
+		uint16_t SC_mask = (frameBuffer[reply_id].data[0]<<8) + frameBuffer[reply_id].data[1];
 
+		if(!(SC_mask & 0xE001)){
+			// write new sc mask to eeprom
+			eeprom_update_word(&eeSC_mask, SC_mask);
+			eeprom_update_byte(&eeSC_already_sent_from_server,SC_already_received_Pattern);
+			
+			//refresh xbee  parameters
+			xbee_init(&paint_info_line,NULL,0,SC_mask);
+			xbee_Set_Scan_Channels(xbee.ScanChannels);
+			xbee_WR();
+			
+			//Send Status Ack
+			sendbuffer[0] = 0;
+			xbee_send_message(SET_SC_XBEE_MASK,sendbuffer,1);
+			}else{
+			//Send Status Ack
+			sendbuffer[0] = 1;
+			xbee_send_message(SET_SC_XBEE_MASK,sendbuffer,1);
+		}
+		break;
+		
+		case GET_SC_XBEE_MASK:
+		;
+		
+		sendbuffer[0] = xbee.ScanChannels >> 8;
+		sendbuffer[1] = xbee.ScanChannels;
+
+
+		xbee_send_message(GET_SC_XBEE_MASK, sendbuffer,2);
+
+		break;
+		
+		
+		
 
 
 		#ifdef USE_LAN
@@ -1236,7 +1289,7 @@ void execute_server_CMDS(uint8_t reply_id){
 		xbee.CoordIdentifier[NI_len] =  '\0';
 		
 		xbee_pseudo_send_AT_response( 'N', 'I', 0, sendbuffer, 0);
-		
+		break;
 		default:;
 		uint8_t AT_Code = frameBuffer[reply_id].type;
 		
@@ -1246,12 +1299,12 @@ void execute_server_CMDS(uint8_t reply_id){
 		{
 			
 			
-			xbee_pseudo_send_AT_response( 
-				AT_Lut[(uint8_t)(AT_Code-AT_START)][0], // translate AT_code back to At ASCII chars
-				AT_Lut[(uint8_t)(AT_Code-AT_START)][1],
-				1, // Status == 1 --> atcommand not known
-				sendbuffer,
-				0); // empty payload
+			xbee_pseudo_send_AT_response(
+			AT_Lut[(uint8_t)(AT_Code-AT_START)][0], // translate AT_code back to At ASCII chars
+			AT_Lut[(uint8_t)(AT_Code-AT_START)][1],
+			1, // Status == 1 --> atcommand not known
+			sendbuffer,
+			0); // empty payload
 		}
 		
 		break;
@@ -1673,7 +1726,7 @@ int main(void)
 	while(1)
 	{
 		delta_t = count_t_elapsed - time_first_try;
-		if(delta_t > 60)
+		if(delta_t > WAITTIME_COORDINATOR_ACTIVATION)
 		{
 			Print_add_Line("...failed!",0);
 			Print_add_Line("offline mode",0);
@@ -1821,7 +1874,7 @@ int main(void)
 					char boundsstr[100];
 					for(uint8_t i = 0;i < StartStat.bound_err_counter; i++ ){
 						uint8_t errVal = StartStat.boundsErrors[i];
-		
+						
 						
 						sprintf(boundsstr,STR_RANGE_ERROR,
 						StartStat.optStrings[errVal],
@@ -2029,10 +2082,11 @@ int main(void)
 		
 		
 		if((delta.t_send >= options.t_transmission_max * 60)|| //
-		(delta.t_send >= options.t_transmission_min && delta.Volume_since_last_send > options.delta_V)||
-		(delta.t_send >= options.t_transmission_min && delta.Pressure_since_last_send > options.delta_p)||
-		(delta.t_send >= options.t_transmission_min && status_reset_on_send) )
+		(delta.t_send >= options.t_transmission_min && delta.Volume_since_last_send >= options.delta_V)||
+		(delta.t_send >= options.t_transmission_min && delta.Pressure_since_last_send >= options.delta_p)||
+		(delta.t_send >= options.t_transmission_min && status_reset_on_send && status_reset_on_send != last.Status_on_Send) )
 		{
+
 
 			
 

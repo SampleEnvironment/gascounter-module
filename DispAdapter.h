@@ -83,7 +83,7 @@ void setInitScreen(uint16_t fore, uint16_t back, uint8_t nextLine, uint8_t FontN
 void paint_info_line(char * line, _Bool update);
 void paint_string_row_col(char *text,ROW_NAME row,uint8_t col, uint16_t color);
 void paint_string_row(char *text,ROW_NAME row,uint8_t update,char* unit,uint16_t color);
-void paint_Value(uint64_t val,ROW_NAME row,uint8_t precision, uint8_t min_width,char* unit);
+void paint_Value(double val,ROW_NAME row,uint8_t precision, uint8_t min_width,char* unit);
 void paint_Error(char* text, ROW_NAME row);
 void paint_Main(void);
 void InitScreen_AddLine_ili(const char* Text, const char FirstLine);

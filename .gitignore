@@ -1,0 +1,13 @@
+.vs/*
+
+
+*.d
+*.o
+*.eep
+*.hex
+*.elf
+*.lss
+*.map
+*.srec
+*.mk
+Makefile

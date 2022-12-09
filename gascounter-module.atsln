@@ -7,14 +7,20 @@ Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "gascounter-module", "gascou
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|AVR = Debug|AVR
-		Release|AVR = Release|AVR
+		GCM_old_disp-LAN|AVR = GCM_old_disp-LAN|AVR
+		GCM_old_disp-XBEE|AVR = GCM_old_disp-XBEE|AVR
+		ili9341-LAN|AVR = ili9341-LAN|AVR
+		ili9341-XBEE|AVR = ili9341-XBEE|AVR
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{DF641820-A92A-4D18-A035-FC7916312ED4}.Debug|AVR.ActiveCfg = Debug|AVR
-		{DF641820-A92A-4D18-A035-FC7916312ED4}.Debug|AVR.Build.0 = Debug|AVR
-		{DF641820-A92A-4D18-A035-FC7916312ED4}.Release|AVR.ActiveCfg = Release|AVR
-		{DF641820-A92A-4D18-A035-FC7916312ED4}.Release|AVR.Build.0 = Release|AVR
+		{DF641820-A92A-4D18-A035-FC7916312ED4}.GCM_old_disp-LAN|AVR.ActiveCfg = GCM_old_disp-LAN-HZB|AVR
+		{DF641820-A92A-4D18-A035-FC7916312ED4}.GCM_old_disp-LAN|AVR.Build.0 = GCM_old_disp-LAN-HZB|AVR
+		{DF641820-A92A-4D18-A035-FC7916312ED4}.GCM_old_disp-XBEE|AVR.ActiveCfg = ili9341-XBEE-DEFAULT|AVR
+		{DF641820-A92A-4D18-A035-FC7916312ED4}.GCM_old_disp-XBEE|AVR.Build.0 = ili9341-XBEE-DEFAULT|AVR
+		{DF641820-A92A-4D18-A035-FC7916312ED4}.ili9341-LAN|AVR.ActiveCfg = ili9341-LAN-HZB|AVR
+		{DF641820-A92A-4D18-A035-FC7916312ED4}.ili9341-LAN|AVR.Build.0 = ili9341-LAN-HZB|AVR
+		{DF641820-A92A-4D18-A035-FC7916312ED4}.ili9341-XBEE|AVR.ActiveCfg = ili9341-XBEE-HZB|AVR
+		{DF641820-A92A-4D18-A035-FC7916312ED4}.ili9341-XBEE|AVR.Build.0 = ili9341-XBEE-HZB|AVR
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

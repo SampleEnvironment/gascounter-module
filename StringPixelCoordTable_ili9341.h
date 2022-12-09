@@ -112,13 +112,14 @@
 #define STR_INIT_CLOCK_ERR "Init DS3231M RTC  ...error"
 #define STR_INIT_PRESS "Init BMP085"
 #define STR_INIT_PRESS_SUCC "Init BMP085  ...success"
+#define STR_INIT_PRESS_ERR  "Init BMP085   not connected"
 #define STR_INIT_DONE "Init done"
 
 
 
 // Strings
 
-#define STR_INIT_OFFLINE "Init Offline"
+#define STR_INIT_OFFLINE "Network Err"
 #define STR_INIT_OFFLINE_MESSAGE "Network connection \ncould not be establishedon startup\n\nNetworkstatus:\n%s"
 #define STR_NO_COORDINATOR_FOUND "No Coordinator found"
 #define STR_NO_SERVER_FOUND "No Server found"
