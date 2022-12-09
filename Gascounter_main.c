@@ -639,13 +639,18 @@ void init(void)
 	}
 	else
 	{
-		
+		#ifdef ili9341
+		Print_add_Line(STR_INIT_PRESS_ERR,2);
+		#endif
+		#ifdef GCM_old_disp
+		Print_add_Line(STR_INIT_PRESS_ERR,0);
+		#endif
 		connected.BMP = 0;
 		connected.BMP_on_Startup = 0;
 		connected.TWI = 1;
 		BMP_Temperature = 0;
 		BMP_Pressure = 0;
-		Print_add_Line(" ",0);
+		//Print_add_Line(" ",0);
 
 	}
 	
@@ -1249,7 +1254,7 @@ void execute_server_CMDS(uint8_t reply_id){
 		
 		case GET_SC_XBEE_MASK:
 		;
-			
+		
 		sendbuffer[0] = xbee.ScanChannels >> 8;
 		sendbuffer[1] = xbee.ScanChannels;
 
@@ -1284,7 +1289,7 @@ void execute_server_CMDS(uint8_t reply_id){
 		xbee.CoordIdentifier[NI_len] =  '\0';
 		
 		xbee_pseudo_send_AT_response( 'N', 'I', 0, sendbuffer, 0);
-		
+		break;
 		default:;
 		uint8_t AT_Code = frameBuffer[reply_id].type;
 		
@@ -1721,7 +1726,7 @@ int main(void)
 	while(1)
 	{
 		delta_t = count_t_elapsed - time_first_try;
-		if(delta_t > 60)
+		if(delta_t > WAITTIME_COORDINATOR_ACTIVATION)
 		{
 			Print_add_Line("...failed!",0);
 			Print_add_Line("offline mode",0);
@@ -2077,8 +2082,8 @@ int main(void)
 		
 		
 		if((delta.t_send >= options.t_transmission_max * 60)|| //
-		(delta.t_send >= options.t_transmission_min && delta.Volume_since_last_send > options.delta_V)||
-		(delta.t_send >= options.t_transmission_min && delta.Pressure_since_last_send > options.delta_p)||
+		(delta.t_send >= options.t_transmission_min && delta.Volume_since_last_send >= options.delta_V)||
+		(delta.t_send >= options.t_transmission_min && delta.Pressure_since_last_send >= options.delta_p)||
 		(delta.t_send >= options.t_transmission_min && status_reset_on_send && status_reset_on_send != last.Status_on_Send) )
 		{
 

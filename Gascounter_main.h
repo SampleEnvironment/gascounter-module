@@ -36,6 +36,7 @@
 #define MEASUREMENT_MESSAGE_LENGTH 23  /**< @brief Number of Bytes that makes up one Measurement Message*/
 #define NUMBER_LOGIN_BYTES	    36     /**< @brief Number of Bytes in login Message from Server   */
 
+#define WAITTIME_COORDINATOR_ACTIVATION 300
 //#define COM_TIMEOUT_TIME 		10	/**< @brief Communication Timeout-period in Seconds  */
 
 

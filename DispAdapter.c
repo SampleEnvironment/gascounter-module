@@ -223,7 +223,7 @@ void paint_Main(void){
 
 
 
-void paint_Value(uint64_t val,ROW_NAME row,uint8_t precision, uint8_t min_width,char* unit){
+void paint_Value(double val,ROW_NAME row,uint8_t precision, uint8_t min_width,char* unit){
 	#ifdef ili9341
 	char numberbuffer[30];
 	dtostrf(((double)val)/pow(10,precision),min_width,precision,numberbuffer);
@@ -390,8 +390,14 @@ void displayTemPreVol(void){
 				paint_string_row("",TEMP,1,"",white);
 				sensor_err = 0;
 			}
-			
-			paint_Value( options.Temperature_value - 2732,TEMP, 1, 4, "°C");
+			if (!options.T_Compensation_enable && !connected.BMP)
+			{
+				paint_string_row("/",TEMP,0,"",white);
+			}
+			else
+			{
+				paint_Value( ((double)options.Temperature_value) - 2732,TEMP, 1, 4, "°C");
+			}
 		}
 		else{
 
@@ -402,7 +408,13 @@ void displayTemPreVol(void){
 		//PRESSURE
 		if(!(options.p_Compensation_enable && (CHECK_ERROR(TEMPPRESS_ERROR))))
 		{
-			paint_Value(options.Pressure_value,PRESS, 1, 6, "mbar");
+			if (!options.p_Compensation_enable && !connected.BMP)
+			{
+				paint_string_row("/",PRESS,0,"",white);
+				}else{
+				paint_Value(options.Pressure_value,PRESS, 1, 6, "mbar");
+			}
+			
 		}
 		else{
 
