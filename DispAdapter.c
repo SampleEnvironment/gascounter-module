@@ -396,7 +396,7 @@ void displayTemPreVol(void){
 			}
 			else
 			{
-				paint_Value( ((double)options.Temperature_value) - 2732,TEMP, 1, 4, "°C");
+				paint_Value( ((double)options.Temperature_value) - 2732,TEMP, 1, 6, "°C");
 			}
 		}
 		else{
