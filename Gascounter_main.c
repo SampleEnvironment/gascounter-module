@@ -577,7 +577,7 @@ void init(void)
 	Print_add_Line(STR_INIT_INTERRUPTS,2);
 	init_interrupts();
 	Print_add_Line(STR_INIT_USART,2);
-	usart_init(39);
+	usart_init();
 	Print_add_Line(STR_INIT_I2C,2);
 	i2c_init();
 
@@ -697,20 +697,11 @@ void init_ports(void)
 */
 void init_timer(void)
 {
-	//Timer1 f ~ 1Hz
-	TCCR1B |= (1<<WGM12) | (1<<CS12) | (1<<CS10);
-	OCR1A = 5999;
-	TIMSK1 |= (1<<OCIE1A);
-	
-	/*
-	//Timer0 f ~ 40Hz T ~ 25ms
-	TCCR0A |= (1<<WGM01);
-	TCCR0B |= (1<<CS00) | (1<<CS02); // N = 1024
-	OCR0A = 2;
-	TIMSK0 |= (1<<OCIE1A);
-	*/
+    // Timer1 CTC, 1 Hz â€” prescaler and OCR1A derived from F_CPU at compile time
+    TCCR1B |= (1<<WGM12) | T1_PRESC_BITS;
+    OCR1A   = T1_OCR1A;
+    TIMSK1 |= (1<<OCIE1A);
 }
-
 
 
 /**
@@ -885,7 +876,7 @@ void PT_Plausibility(void){
 	// sufficient padding is provided if only one of the values is out of bound and while the other one might still be within acceptable range
 	
 	
-	// BMP_Temperature has to be less than (MIN_NOMINAL_TEMPERATURE  + 16°C), while the pressure wave goes through
+	// BMP_Temperature has to be less than (MIN_NOMINAL_TEMPERATURE  + 16ï¿½C), while the pressure wave goes through
 	//--> Pressure wave detection
 	if ((BMP_Pressure > MAX_NOMINAL_PRESSURE) &&
 	(BMP_Temperature < 2891) )

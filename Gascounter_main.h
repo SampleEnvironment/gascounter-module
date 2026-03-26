@@ -115,11 +115,11 @@
 
 #define MAX_NOMINAL_PRESSURE			117000 // 1170.00 mbar
 #define MIN_NOMINAL_PRESSURE             95000 // 950.00 mbar
-#define MAX_NOMINAL_TEMPERATURE			  3280  // 55°C
-#define MIN_NOMINAL_TEMPERATURE			  2631  //-10°C
+#define MAX_NOMINAL_TEMPERATURE			  3280  // 55ï¿½C
+#define MIN_NOMINAL_TEMPERATURE			  2631  //-10ï¿½C
 
 #define MAX_PRESSURE_DELTA			   12000 //  120mbar/5s
-#define MAX_TEMPERATURE_DELTA			 130 //  13°C/5s
+#define MAX_TEMPERATURE_DELTA			 130 //  13ï¿½C/5s
 
 #define FUNTRACE_ARRAY_SIZE			10
 #define FUNTRACE_HEADER_LEN			7
@@ -318,7 +318,7 @@ extern uint16_t status_reset_on_send;
 extern optType options;
 extern uint8_t position_volume_dot_point;
 extern char AT_Lut[22] [2];
-// I²C Codes
+// Iï¿½C Codes
 
 #define DEVICE_NOT_CONNECTED 2
 #define I2C_ERROR 1
@@ -384,6 +384,38 @@ extern char AT_Lut[22] [2];
 //#define BIT_FLIP(a,b) ((a) ^= (1<<(b)))
 #define BIT_CHECK(a,b) (!!((a) & (1<<(b))))
 
+
+/* ---------------------------------------------------------------
+ * Auto-select Timer1 prescaler and OCR1A for exactly 1 Hz CTC
+ * Works for any F_CPU that divides evenly by a standard prescaler
+ * and whose tick count fits in 16 bits.
+ * --------------------------------------------------------------- */
+
+#if   (F_CPU % 1    == 0) && (F_CPU / 1    <= 65535)
+  #define T1_PRESC_BITS  (0)
+  #define T1_PRESC       1UL
+#elif (F_CPU % 8    == 0) && (F_CPU / 8    <= 65535)
+  #define T1_PRESC_BITS  (1<<CS11)
+  #define T1_PRESC       8UL
+#elif (F_CPU % 64   == 0) && (F_CPU / 64   <= 65535)
+  #define T1_PRESC_BITS  ((1<<CS11)|(1<<CS10))
+  #define T1_PRESC       64UL
+#elif (F_CPU % 256  == 0) && (F_CPU / 256  <= 65535)
+  #define T1_PRESC_BITS  (1<<CS12)
+  #define T1_PRESC       256UL
+#elif (F_CPU % 1024 == 0) && (F_CPU / 1024 <= 65535)
+  #define T1_PRESC_BITS  ((1<<CS12)|(1<<CS10))
+  #define T1_PRESC       1024UL
+#else
+  #error "F_CPU: no standard Timer1 prescaler gives exact 1 Hz"
+#endif
+
+#define T1_OCR1A  (F_CPU / T1_PRESC - 1UL)
+
+/* Sanity check â€” catches rounding issues at compile time */
+#if T1_OCR1A > 65535
+  #error "T1_OCR1A overflows 16-bit register"
+#endif
 
 
 #define SINGLE_FRAME_LENGTH 	256		// Full length of one frame  ATTENTION if changed then change DATA_LENGTH in xbee_utilities.h as well
