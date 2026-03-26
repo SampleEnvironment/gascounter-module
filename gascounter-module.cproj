@@ -491,11 +491,11 @@
   <avrgcc.compiler.symbols.DefSymbols>
     <ListValues>
       <Value>DEBUG</Value>
-      <Value>F_CPU=6144000</Value>
+      <Value>F_CPU=8000000</Value>
+      <Value>INTERNAL_OSZ</Value>
       <Value>GASCOUNTER_MODULE</Value>
       <Value>GCM_old_disp</Value>
       <Value>USE_LAN</Value>
-      <Value>INTERNAL_OSZ</Value>
     </ListValues>
   </avrgcc.compiler.symbols.DefSymbols>
   <avrgcc.compiler.directories.IncludePaths>
@@ -541,12 +541,12 @@
   <avrgcc.compiler.symbols.DefSymbols>
     <ListValues>
       <Value>DEBUG</Value>
-      <Value>F_CPU=6144000</Value>
+      <Value>F_CPU=8000000</Value>
+      <Value>INTERNAL_OSZ</Value>
       <Value>GASCOUNTER_MODULE</Value>
       <Value>GCM_old_disp</Value>
       <Value>USE_LAN</Value>
       <Value>HZB_HE_NETWORK</Value>
-      <Value>INTERNAL_OSZ</Value>
     </ListValues>
   </avrgcc.compiler.symbols.DefSymbols>
   <avrgcc.compiler.directories.IncludePaths>
@@ -592,11 +592,11 @@
   <avrgcc.compiler.symbols.DefSymbols>
     <ListValues>
       <Value>DEBUG</Value>
-      <Value>F_CPU=6144000</Value>
+      <Value>F_CPU=8000000</Value>
+      <Value>INTERNAL_OSZ</Value>
       <Value>GASCOUNTER_MODULE</Value>
       <Value>GCM_old_disp</Value>
       <Value>USE_XBEE</Value>
-      <Value>INTERNAL_OSZ</Value>
     </ListValues>
   </avrgcc.compiler.symbols.DefSymbols>
   <avrgcc.compiler.directories.IncludePaths>
@@ -642,12 +642,12 @@
   <avrgcc.compiler.symbols.DefSymbols>
     <ListValues>
       <Value>DEBUG</Value>
-      <Value>F_CPU=6144000</Value>
+      <Value>F_CPU=8000000</Value>
+      <Value>INTERNAL_OSZ</Value>
       <Value>GASCOUNTER_MODULE</Value>
       <Value>GCM_old_disp</Value>
       <Value>USE_XBEE</Value>
       <Value>HZB_HE_NETWORK</Value>
-      <Value>INTERNAL_OSZ</Value>
     </ListValues>
   </avrgcc.compiler.symbols.DefSymbols>
   <avrgcc.compiler.directories.IncludePaths>
@@ -693,11 +693,11 @@
   <avrgcc.compiler.symbols.DefSymbols>
     <ListValues>
       <Value>DEBUG</Value>
-      <Value>F_CPU=6144000</Value>
+      <Value>F_CPU=8000000</Value>
+      <Value>INTERNAL_OSZ</Value>
       <Value>GASCOUNTER_MODULE</Value>
       <Value>ili9341</Value>
       <Value>USE_LAN</Value>
-      <Value>INTERNAL_OSZ</Value>
     </ListValues>
   </avrgcc.compiler.symbols.DefSymbols>
   <avrgcc.compiler.directories.IncludePaths>
@@ -743,12 +743,12 @@
   <avrgcc.compiler.symbols.DefSymbols>
     <ListValues>
       <Value>DEBUG</Value>
-      <Value>F_CPU=6144000</Value>
+      <Value>F_CPU=8000000</Value>
+      <Value>INTERNAL_OSZ</Value>
       <Value>GASCOUNTER_MODULE</Value>
       <Value>ili9341</Value>
       <Value>USE_LAN</Value>
       <Value>HZB_HE_NETWORK</Value>
-      <Value>INTERNAL_OSZ</Value>
     </ListValues>
   </avrgcc.compiler.symbols.DefSymbols>
   <avrgcc.compiler.directories.IncludePaths>
@@ -794,11 +794,11 @@
   <avrgcc.compiler.symbols.DefSymbols>
     <ListValues>
       <Value>DEBUG</Value>
-      <Value>F_CPU=6144000</Value>
+      <Value>F_CPU=8000000</Value>
+      <Value>INTERNAL_OSZ</Value>
       <Value>GASCOUNTER_MODULE</Value>
       <Value>ili9341</Value>
       <Value>USE_XBEE</Value>
-      <Value>INTERNAL_OSZ</Value>
     </ListValues>
   </avrgcc.compiler.symbols.DefSymbols>
   <avrgcc.compiler.directories.IncludePaths>
@@ -844,12 +844,12 @@
   <avrgcc.compiler.symbols.DefSymbols>
     <ListValues>
       <Value>DEBUG</Value>
-      <Value>F_CPU=6144000</Value>
+      <Value>F_CPU=8000000</Value>
+      <Value>INTERNAL_OSZ</Value>
       <Value>GASCOUNTER_MODULE</Value>
       <Value>ili9341</Value>
       <Value>USE_XBEE</Value>
       <Value>HZB_HE_NETWORK</Value>
-      <Value>INTERNAL_OSZ</Value>
     </ListValues>
   </avrgcc.compiler.symbols.DefSymbols>
   <avrgcc.compiler.directories.IncludePaths>
